@@ -21,9 +21,25 @@ description:         Please see the README on GitHub at <https://github.com/fizr
 
 dependencies:
 - base >= 4.7 && < 5
+- containers
+- vector
+
+executables:
+  a216264:
+    main:         A216264.hs
+    source-dirs:  app
+    ghc-options:
+      - -O2
+      - -threaded
+      - -rtsopts
+      - -with-rtsopts=-N
+    dependencies:
+      - eertree
 
 library:
   source-dirs: src
+  ghc-options:
+    - -Wall -fno-warn-type-defaults
 
 tests:
   eertree-test:
