@@ -21,6 +21,9 @@ import           GHC.TypeLits                 (KnownNat, Nat)
 import           EERTREE.Node.Internal.Weakly
 import           EERTREE.Symbol
 
+-- $setup
+-- >>> :set -XTypeApplications -XDataKinds
+
 -- | A node corresponsing to a palindrome
 -- in an alphabet of size @n@.
 data Node (n :: Nat) = Node
@@ -81,7 +84,7 @@ directLink c node = fromMaybe oddNode (IntMap.lookup (coerce c) (links node))
 -- NOTE: this will result in an error if input is not a palindrome.
 --
 -- >>> fromPalindrome @2 [0,1,1]
--- fromPalindrome *** Exception: not a palindrome
+-- *** Exception: not a palindrome
 -- ...
 fromPalindrome :: KnownNat n => [Symbol n] -> Node n
 fromPalindrome xs

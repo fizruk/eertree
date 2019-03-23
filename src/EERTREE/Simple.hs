@@ -13,6 +13,9 @@ import qualified Data.Vector.Unboxed.Mutable as MVector
 import           EERTREE.Node
 import           EERTREE.Symbol
 
+-- $setup
+-- >>> :set -XTypeApplications -XDataKinds
+
 -- | A palindromic tree for some string with auxillary information.
 data EERTREE n = EERTREE
   { strLen      :: !Int       -- ^ Length of the analysed string.

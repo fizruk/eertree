@@ -19,6 +19,12 @@ extra-source-files:
 # common to point users to the README.md file.
 description:         Please see the README on GitHub at <https://github.com/fizruk/eertree#readme>
 
+custom-setup:
+  dependencies:
+    - base
+    - Cabal
+    - cabal-doctest >=1.0.2 && <1.1
+
 dependencies:
 - base >= 4.7 && < 5
 - containers
@@ -51,3 +57,14 @@ tests:
     - -with-rtsopts=-N
     dependencies:
     - eertree
+
+  doctests:
+    source-dirs: test
+    main: doctests.hs
+    other-modules: []
+    dependencies:
+    - base
+    - doctest
+    - Glob
+    - QuickCheck
+    - template-haskell

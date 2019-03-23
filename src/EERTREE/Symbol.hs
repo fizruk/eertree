@@ -9,6 +9,9 @@ module EERTREE.Symbol where
 import           Data.Proxy
 import           GHC.TypeLits (KnownNat, Nat, natVal)
 
+-- $setup
+-- >>> :set -XTypeApplications -XDataKinds
+
 -- | A symbol in an alphabet of size @n@.
 newtype Symbol (n :: Nat) = Symbol { fromSymbol :: Int }
   deriving newtype (Eq, Ord, Show, Enum)
