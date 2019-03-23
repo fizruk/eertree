@@ -69,11 +69,17 @@ prepend c t =
 subpalindromes :: KnownNat n => [Symbol n] -> [[Symbol n]]
 subpalindromes = map value . nub . palindromes . eertree
 
--- | Compute first N elements of A216264 sequence
--- (binary rich strings count for n = 0, 1 ..).
+-- | Compute first \(n\) elements of <https://oeis.org/A216264 A216264 sequence>
+-- (binary rich strings count for \(n = 0, 1, \ldots\)).
 --
 -- For memory efficiency the whole sequence segment
 -- is computed at once and not lazily as one might expect.
+--
+-- This should run in \(\mathcal{O}(n)\) memory
+-- with garbage collector working normally.
+--
+-- >>> a216264 15
+-- [1,2,4,8,16,32,64,128,252,488,932,1756,3246,5916,10618]
 a216264 :: Int -> [Int]
 a216264 n = dfsCountLevels n empty (richSubEERTREEs @2)
 

@@ -182,7 +182,6 @@ mkDirectLinks
 mkDirectLinks c parentNode =
   case symbolAt (len newMaxSuf) t of
     Just c'
-      -- | len t == 1 -> IntMap.singleton c evenNode
       | otherwise  -> IntMap.insert (coerce c') newMaxSuf (links newMaxSuf)
     Nothing
       | len t == len newMaxSuf -> IntMap.singleton (coerce c) evenNode
