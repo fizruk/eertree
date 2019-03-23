@@ -33,6 +33,10 @@ empty = EERTREE
   , palindromes = []
   }
 
+-- | An eertree for a singleton string.
+singleton :: KnownNat n => Symbol n -> EERTREE n
+singleton c = prepend c empty
+
 -- | Analyse a string by building an eertree.
 eertree :: KnownNat n => [Symbol n] -> EERTREE n
 eertree = foldr prepend empty
@@ -84,7 +88,13 @@ subpalindromes = map value . nub . palindromes . eertree
 -- >>> a216264 15
 -- [1,2,4,8,16,32,64,128,252,488,932,1756,3246,5916,10618]
 a216264 :: Int -> [Int]
-a216264 n = dfsCountLevels n empty (richSubEERTREEs @2)
+a216264 n = 1 : map (*2) halves
+  where
+    -- Observation: there is exactly the same number of rich strings
+    -- that start with 0 as there are those starting with 1.
+    -- That is why we can do half work (or 1/(alphabet size) in general)
+    -- and count rich strings faster.
+    halves = dfsCountLevels (n - 1) (singleton 0) (richSubEERTREEs @2)
 
 -- * Helpers
 
