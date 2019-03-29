@@ -3,7 +3,8 @@
 {-# LANGUAGE TypeApplications    #-}
 module EERTREE.Double where
 
-import           Data.List                   (nub, transpose)
+import           Data.List                   (nub, sort)
+import           Data.Ord                    (comparing)
 import           GHC.TypeLits                (KnownNat)
 
 import           Control.Monad.ST            (runST)
@@ -26,6 +27,17 @@ data EERTREE n = EERTREE
   , palindromes :: [Node n]   -- ^ Accumulated list of encountered palindromes.
   } deriving (Show)
 
+instance Eq (EERTREE n) where
+  x == y = (x `compare` y) == EQ
+
+instance Ord (EERTREE n) where
+  compare = comparing strLen
+          <> comparing maxSuffix
+          <> comparing maxPrefix
+          <> comparing strSuffix
+          <> comparing strPrefix
+          <> comparing (nub . sort . palindromes)
+
 -- | An empty eertree.
 empty :: forall n. KnownNat n => EERTREE n
 empty = EERTREE
@@ -46,6 +58,8 @@ eertree :: KnownNat n => [Symbol n] -> EERTREE n
 eertree = foldr prepend empty
 
 -- | Analyse a string by building an eertree using append.
+--
+-- prop> eertree @2 (listMod xs) == eertree' (listMod xs)
 eertree' :: KnownNat n => [Symbol n] -> EERTREE n
 eertree' = foldl (flip append) empty
 
@@ -58,6 +72,8 @@ eertree' = foldl (flip append) empty
 --   splitLength = (length s) `div` 2
 
 -- | Combine two eertrees.
+--
+-- prop> merge @2 (eertree (listMod xs)) (eertree (listMod ys)) == eertree (listMod (xs ++ ys))
 merge :: KnownNat n => EERTREE n -> EERTREE n -> EERTREE n
 merge l r
   | strLen l > strLen r = mergeToLeft l r
@@ -65,12 +81,12 @@ merge l r
 
 -- | Combine two eertrees only by adding to left eertree.
 mergeToLeft :: KnownNat n => EERTREE n -> EERTREE n -> EERTREE n
-mergeToLeft l r = 
+mergeToLeft l r =
   let t = foldl (flip append) l (value (maxPrefix r))
   in addLeft t (strSuffix r)
   where
     addLeft t []       = t
-    addLeft t s@(c:cs) = 
+    addLeft t s@(c:cs) =
       case strPrefix t of
         c':_ | c' == c -> addLeft (append c t) cs
         _              -> t { strLen      = strLen t + (length s)
@@ -83,12 +99,12 @@ mergeToLeft l r =
 
 -- | Combine two eertrees only by adding to right eertree.
 mergeToRight :: KnownNat n => EERTREE n -> EERTREE n -> EERTREE n
-mergeToRight l r = 
+mergeToRight l r =
   let t = foldr prepend r (value (maxSuffix l))
   in addRight t (strPrefix l)
   where
     addRight t []       = t
-    addRight t s@(c:cs) = 
+    addRight t s@(c:cs) =
       case strSuffix t of
         c':_ | c' == c -> addRight (prepend c t) cs
         _              -> t { strLen      = strLen t + (length s)
@@ -147,7 +163,7 @@ append c t = checkPrefix $
         newMaxSuffix -> t
           { strLen = strLen t + 1
           , maxSuffix = newMaxSuffix
-          , strPrefix = 
+          , strPrefix =
               let n = len (maxSuffix t) - len newMaxSuffix + 1
                in reverse (take n (value (maxSuffix t))) ++ strPrefix t
           , strSuffix = strSuffix t ++ [c]
