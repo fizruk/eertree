@@ -42,3 +42,13 @@ instance Num (Symbol n) where
 -- [0,1,2,3,4,5,6,7,8,9]
 alphabet :: forall n. KnownNat n => [Symbol n]
 alphabet = [minBound..maxBound]
+
+-- | Convert a list of integers into a list of 'Symbol's
+-- using @'mod' n@.
+--
+-- >>> listMod @5 [0..20]
+-- [0,1,2,3,4,0,1,2,3,4,0,1,2,3,4,0,1,2,3,4,0]
+listMod :: forall n. KnownNat n => [Int] -> [Symbol n]
+listMod = map (\k -> Symbol (k `mod` n))
+  where
+    n = fromInteger (natVal (Proxy @n))
