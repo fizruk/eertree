@@ -74,6 +74,7 @@ eertree' = foldl (flip append) empty
 -- | Combine two eertrees.
 --
 -- prop> merge @2 (eertree (listMod xs)) (eertree (listMod ys)) == eertree (listMod (xs ++ ys))
+-- prop> mergeToLeft @2 (eertree (listMod xs)) (eertree (listMod ys)) == mergeToRight @2 (eertree (listMod xs)) (eertree (listMod ys))
 merge :: KnownNat n => EERTREE n -> EERTREE n -> EERTREE n
 merge l r
   | strLen l > strLen r = mergeToLeft l r
@@ -89,9 +90,11 @@ mergeToLeft l r =
     addLeft t s@(c:cs) =
       case strPrefix t of
         c':_ | c' == c -> addLeft (append c t) cs
+        _    | len (newSuffixOf c (maxSuffix t)) > (strLen r) - (length cs) 
+                       -> addLeft (append c t) cs
         _              -> t { strLen      = strLen t + (length s)
                             , maxSuffix   = maxSuffix r
-                            , strSuffix   = s
+                            , strSuffix   = drop (len (maxPrefix t)) (fromEERTREE l ++ fromEERTREE r)
                             , strPrefix   = reverse (fromEERTREE l ++ reverse (strPrefix r))
                             , palindromes = palindromes t ++ palindromes r
                             }
@@ -107,9 +110,11 @@ mergeToRight l r =
     addRight t s@(c:cs) =
       case strSuffix t of
         c':_ | c' == c -> addRight (prepend c t) cs
+        _    | len (newSuffixOf c (maxPrefix t)) > (strLen l) - (length cs) 
+                       -> addRight (prepend c t) cs
         _              -> t { strLen      = strLen t + (length s)
-                            , maxPrefix   = maxPrefix r
-                            , strPrefix   = s
+                            , maxPrefix   = maxPrefix l
+                            , strPrefix   = drop (len (maxSuffix t)) (reverse (fromEERTREE l ++ fromEERTREE r))
                             , strSuffix   = strSuffix l ++ fromEERTREE r
                             , palindromes = palindromes t ++ palindromes l
                             }
