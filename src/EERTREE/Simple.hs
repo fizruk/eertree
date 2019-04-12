@@ -4,6 +4,7 @@
 module EERTREE.Simple where
 
 import           Data.List                   (nub)
+import           Data.Ord                    (comparing)
 import           GHC.TypeLits                (KnownNat)
 
 import           Control.Monad.ST            (runST)
@@ -23,6 +24,15 @@ data EERTREE n = EERTREE
   , strSuffix   :: [Symbol n] -- ^ Suffix, following maximum palindromic prefix.
   , palindromes :: [Node n]   -- ^ Accumulated list of encountered palindromes.
   } deriving (Show)
+
+instance Eq (EERTREE n) where
+  x == y = (x `compare` y) == EQ
+
+instance Ord (EERTREE n) where
+  compare = comparing strLen
+          <> comparing maxPrefix
+          <> comparing strSuffix
+          <> comparing (palindromes)
 
 -- | An empty eertree.
 empty :: forall n. KnownNat n => EERTREE n
@@ -66,6 +76,31 @@ prepend c t =
                in drop n (c : value (maxPrefix t)) ++ strSuffix t
           , palindromes = newMaxPrefix : palindromes t
           }
+
+pop :: KnownNat n => EERTREE n -> Maybe (Symbol n, EERTREE n)
+pop t
+  | strLen t <= 0 = Nothing
+  | strLen t == 1 = Just (head (fromEERTREE t), empty)
+  | otherwise = Just (head (fromEERTREE t), t')
+  where
+    t' = EERTREE
+      { strLen = strLen t - 1
+      , palindromes = tail (palindromes t)
+      , maxPrefix = head (palindromes t')
+      , strSuffix = drop (len (maxPrefix t') + 1) (fromEERTREE t)
+      }
+
+palPrefixesBefore :: KnownNat n => Symbol n -> EERTREE n -> [Node n]
+palPrefixesBefore c t =
+  case strSuffix t of
+    c':_ | c == c' -> maxPrefix t : allSuffixes (maxPrefix t)
+    _              -> allSuffixes (maxPrefix t)
+
+  where
+    allSuffixes node =
+      case directLink c node of
+        node' | len node' >= 0 -> node' : allSuffixes node'
+        _                      -> []
 
 -- * Applications
 
