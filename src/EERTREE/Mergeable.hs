@@ -100,7 +100,6 @@ leftToRight = foldl (flip append) empty
 fromM :: M n -> [Symbol n]
 fromM = Simple.fromEERTREE . forward
 
-
 -- | Add a symbol to the beginning of a string
 -- corresponding to an double-ended eertree.
 prepend :: KnownNat n => Symbol n -> M n -> M n
@@ -124,7 +123,6 @@ prepend c M{..} = M forward' backward'
 
     newPalindromes = map (edge c)
       (Simple.palPrefixesBefore c forward)
-
 
 -- | Add a symbol to the end of a string
 -- corresponding to an double-ended eertree.
@@ -160,7 +158,7 @@ popLeft m@M{..} =
         updateBackwards b
           | isWholePalindromeRemoved
               = b { maxPrefix = newMaxSuffix
-                  , strSuffix = reverse (take (strLen forward' - len newMaxSuffix) (Simple.fromEERTREE forward')) }
+                  , strSuffix = (drop (len newMaxSuffix) (init(Simple.fromEERTREE backward))) }
           | otherwise = b { strSuffix = init (strSuffix backward) }
 
         link = maximum . links    -- FIXME: uneffective
@@ -209,7 +207,7 @@ mergeToRight l r =
         _    | len (newSuffixOf c (maxPrefix (forward t))) > (strLen (forward l)) - (length cs) -> addRight (prepend c t) cs
         _  -> t -- TODO: simple gluing
 
--- |
+-- | Update list with given function to determine position at which it should be replaced
 --
 -- >>> updatePalindromes id id 10 [0,0,0,0,0,0,0,0,0,0] [5,3]
 -- [0,0,0,0,0,5,0,3,0,0]
