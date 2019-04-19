@@ -160,7 +160,7 @@ popLeft m@M{..} =
         updateBackwards b
           | isWholePalindromeRemoved
               = b { maxPrefix = newMaxSuffix
-                  , strSuffix = take (strLen forward' - len newMaxSuffix) (Simple.fromEERTREE forward') }
+                  , strSuffix = reverse (take (strLen forward' - len newMaxSuffix) (Simple.fromEERTREE forward')) }
           | otherwise = b { strSuffix = init (strSuffix backward) }
 
         link = maximum . links    -- FIXME: uneffective
@@ -170,7 +170,6 @@ popLeft m@M{..} =
 
 -- | Remove symbol at the end of a string
 -- corresponding to an double-ended eertree.
--- [0,0,1,0,0] bug
 --
 --
 -- prop> (length xs > 2) ==> popRight @2 (leftToRight (listMod xs)) == Just(last (fromM(leftToRight (listMod xs))),(leftToRight (init (listMod (xs)))))
@@ -211,6 +210,7 @@ mergeToRight l r =
         _  -> t -- TODO: simple gluing
 
 -- |
+--
 -- >>> updatePalindromes id id 10 [0,0,0,0,0,0,0,0,0,0] [5,3]
 -- [0,0,0,0,0,5,0,3,0,0]
 updatePalindromes :: (b -> Int) -> (b -> a) -> Int -> [a] -> [b] -> [a]
