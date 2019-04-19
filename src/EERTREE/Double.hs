@@ -3,7 +3,7 @@
 {-# LANGUAGE TypeApplications    #-}
 module EERTREE.Double where
 
-import           Data.List                   (nub, sort)
+import           Data.List                   (nub)
 import           Data.Ord                    (comparing)
 import           GHC.TypeLits                (KnownNat)
 
@@ -24,7 +24,8 @@ data EERTREE n = EERTREE
   , maxPrefix   :: Node n     -- ^ Maximum palindromic prefix.
   , strSuffix   :: [Symbol n] -- ^ Suffix, following maximum palindromic prefix.
   , strPrefix   :: [Symbol n] -- ^ Prefix (reversed), preceding maximum palindromic suffix.
-  , palindromes :: [Node n]   -- ^ Accumulated list of encountered palindromes.
+  , suffixPals  :: [Node n]   -- ^ Accumulated list of encountered suffix palindromes.
+  , prefixPals  :: [Node n]   -- ^ Accumulated list of encountered prefix palindromes.
   } deriving (Show)
 
 instance Eq (EERTREE n) where
@@ -36,7 +37,8 @@ instance Ord (EERTREE n) where
           <> comparing maxPrefix
           <> comparing strSuffix
           <> comparing strPrefix
-          <> comparing (palindromes)
+          <> comparing suffixPals
+          <> comparing prefixPals
 
 -- | An empty eertree.
 empty :: forall n. KnownNat n => EERTREE n
@@ -46,7 +48,8 @@ empty = EERTREE
   , maxPrefix   = evenNode @n
   , strSuffix   = []
   , strPrefix   = []
-  , palindromes = []
+  , suffixPals  = []
+  , prefixPals  = []
   }
 
 -- | An eertree for a singleton string.
@@ -54,33 +57,29 @@ singleton :: KnownNat n => Symbol n -> EERTREE n
 singleton c = prepend c empty
 
 -- | Analyse a string by building an eertree using prepend.
+--
+-- prop> eertree @2 (listMod xs) == eertree' (listMod xs)
 eertree :: KnownNat n => [Symbol n] -> EERTREE n
-eertree = foldr prepend empty
+eertree s = foldr prepend empty s
 
 -- | Analyse a string by building an eertree using append.
 --
--- prop eertree @2 (listMod xs) == eertree' (listMod xs)
+-- prop> eertree @2 (listMod xs) == eertree' (listMod xs)
 eertree' :: KnownNat n => [Symbol n] -> EERTREE n
-eertree' = foldl (flip append) empty
-
--- | Analyse a string by building an eertree
--- by alternating append and prepend.
--- eertreeMix :: KnownNat n => [Symbol n] -> EERTREE n
--- eertreeMix s = foldr (\(x:x':[]) -> (append x (prepend x'))) empty mixList
--- where
---   mixList     = transpose [(take splitLength s), (drop splitLength s)]
---   splitLength = (length s) `div` 2
+eertree' s =  foldl (flip append) empty s
 
 -- | Combine two eertrees.
 --
--- prop merge @2 (eertree (listMod xs)) (eertree (listMod ys)) == eertree (listMod (xs ++ ys))
--- prop mergeToLeft @2 (eertree (listMod xs)) (eertree (listMod ys)) == mergeToRight @2 (eertree (listMod xs)) (eertree (listMod ys))
+-- prop> merge @2 (eertree (listMod xs)) (eertree (listMod ys)) == eertree (listMod (xs ++ ys))
+-- prop> merge @2 (eertree' (listMod xs)) (eertree' (listMod ys)) == eertree (listMod (xs ++ ys))
 merge :: KnownNat n => EERTREE n -> EERTREE n -> EERTREE n
 merge l r
   | strLen l > strLen r = mergeToLeft l r
   | otherwise           = mergeToRight l r
 
--- | Combine two eertrees only by adding to left eertree.
+-- | Combine two eertrees (suffix nature) in a smart way
+--
+-- prop> mergeToLeft @2 (eertree' (listMod xs)) (eertree' (listMod ys)) == eertree' (listMod (xs ++ ys))
 mergeToLeft :: KnownNat n => EERTREE n -> EERTREE n -> EERTREE n
 mergeToLeft l r =
   let t = foldl (flip append) l (value (maxPrefix r))
@@ -96,10 +95,13 @@ mergeToLeft l r =
                             , maxSuffix   = maxSuffix r
                             , strSuffix   = drop (len (maxPrefix t)) (fromEERTREE l ++ fromEERTREE r)
                             , strPrefix   = reverse (fromEERTREE l ++ reverse (strPrefix r))
-                            , palindromes = palindromes t ++ palindromes r
+                            , suffixPals  = take ((strLen r) - ((strLen t) - (strLen l))) (suffixPals r) ++ suffixPals t
+                            , prefixPals  = take ((strLen r) - ((strLen t) - (strLen l))) (prefixPals r) ++ prefixPals t
                             }
 
--- | Combine two eertrees only by adding to right eertree.
+-- | Combine two eertrees (prefix nature) in a smart way
+--
+-- prop>  mergeToRight @2 (eertree (listMod xs)) (eertree (listMod ys)) == eertree (listMod (xs ++ ys))
 mergeToRight :: KnownNat n => EERTREE n -> EERTREE n -> EERTREE n
 mergeToRight l r =
   let t = foldr prepend r (value (maxSuffix l))
@@ -115,52 +117,9 @@ mergeToRight l r =
                             , maxPrefix   = maxPrefix l
                             , strPrefix   = drop (len (maxSuffix t)) (reverse (fromEERTREE l ++ fromEERTREE r))
                             , strSuffix   = strSuffix l ++ fromEERTREE r
-                            , palindromes = palindromes t ++ palindromes l
+                            , suffixPals  = take ((strLen l) - ((strLen t) - (strLen r))) (suffixPals l) ++ suffixPals t
+                            , prefixPals  = take ((strLen l) - ((strLen t) - (strLen r))) (prefixPals l) ++ prefixPals t
                             }
-
--- | Combine two eertrees (suffix nature) in a smart way
--- <> comparing (palindromes) (without sort and nub)
--- prop> mergeToLeftSmart @2 (eertree' (listMod xs)) (eertree' (listMod ys)) == eertree' (listMod (xs ++ ys))
-mergeToLeftSmart :: KnownNat n => EERTREE n -> EERTREE n -> EERTREE n
-mergeToLeftSmart l r =
-  let t = foldl (flip append) l (value (maxPrefix r))
-  in addLeft t (strSuffix r)
-  where
-    addLeft t []       = t
-    addLeft t s@(c:cs) =
-      case strPrefix t of
-        c':_ | c' == c -> addLeft (append c t) cs
-        _    | len (newSuffixOf c (maxSuffix t)) > (strLen r) - (length cs) 
-                       -> addLeft (append c t) cs
-        _              -> t { strLen      = strLen t + (length s)
-                            , maxSuffix   = maxSuffix r
-                            , strSuffix   = drop (len (maxPrefix t)) (fromEERTREE l ++ fromEERTREE r)
-                            , strPrefix   = reverse (fromEERTREE l ++ reverse (strPrefix r))
-                            , palindromes = take ((strLen r) - ((strLen t) - (strLen l))) (palindromes r) ++ palindromes t
-                            }
-
-
--- | Combine two eertrees (prefix nature) in a smart way
--- <> comparing (palindromes) (without sort and nub)
--- prop>  mergeToRightSmart @2 (eertree (listMod xs)) (eertree (listMod ys)) == eertree (listMod (xs ++ ys))
-mergeToRightSmart :: KnownNat n => EERTREE n -> EERTREE n -> EERTREE n
-mergeToRightSmart l r =
-  let t = foldr prepend r (value (maxSuffix l))
-  in addRight t (strPrefix l)
-  where
-    addRight t []       = t
-    addRight t s@(c:cs) =
-      case strSuffix t of
-        c':_ | c' == c -> addRight (prepend c t) cs
-        _    | len (newSuffixOf c (maxPrefix t)) > (strLen l) - (length cs) 
-                       -> addRight (prepend c t) cs
-        _              -> t { strLen      = strLen t + (length s)
-                            , maxPrefix   = maxPrefix l
-                            , strPrefix   = drop (len (maxSuffix t)) (reverse (fromEERTREE l ++ fromEERTREE r))
-                            , strSuffix   = strSuffix l ++ fromEERTREE r
-                            , palindromes = take ((strLen l) - ((strLen t) - (strLen r))) (palindromes l) ++ palindromes t 
-                            }
-
 
 -- | Pop last symbol from eertree (suffix nature)
 --
@@ -174,13 +133,12 @@ popBack t
                       , maxSuffix   = head oldPalindromes
                       , strPrefix   = reverse (take ((strLen t) - len (head oldPalindromes) - 1) (fromEERTREE t))
                       , strSuffix   = drop (len oldMaxPrefix) (init(fromEERTREE t))
-                      , palindromes = oldPalindromes 
+                      , suffixPals  = oldPalindromes 
                       }
   where
-    oldPalindromes = tail (palindromes t)
-    oldMaxPrefix
-      | len (maxPrefix t) == strLen t = maximum(map ((flip directLink) (maxPrefix t)) alphabet)
-      | otherwise                     = maxPrefix t 
+    oldPalindromes = tail (suffixPals t)
+    oldPrefixPals  = tail (_)
+    oldMaxPrefix   = head oldPrefixPals
  
 -- | Pop last symbol from eertree (prefix nature)
 --
@@ -194,10 +152,10 @@ popFront t
                       , maxSuffix   = oldMaxSuffix 
                       , strPrefix   = reverse (take ((strLen t) - len (oldMaxSuffix) - 1) (tail(fromEERTREE t)))
                       , strSuffix   = drop (len (head oldPalindromes)) (tail(fromEERTREE t))
-                      , palindromes = oldPalindromes 
+                      , prefixPals  = oldPalindromes 
                       }
   where
-    oldPalindromes = tail (palindromes t)
+    oldPalindromes = tail (prefixPals t)
     oldMaxSuffix
       | len (maxSuffix t) == strLen t = maximum(map ((flip directLink) (maxSuffix t)) alphabet)
       | otherwise                     = maxSuffix t 
@@ -216,7 +174,7 @@ prepend c t = checkSuffix $
       , maxPrefix = edge c (maxPrefix t)
       , strPrefix = strPrefix t ++ [c]
       , strSuffix = cs
-      , palindromes = edge c (maxPrefix t) : palindromes t
+      , prefixPals = edge c (maxPrefix t) : prefixPals t
       }
     _ ->
       case newSuffixOf c (maxPrefix t) of
@@ -227,12 +185,12 @@ prepend c t = checkSuffix $
           , strSuffix =
               let n = len newMaxPrefix
                in drop n (c : value (maxPrefix t)) ++ strSuffix t
-          , palindromes = newMaxPrefix : palindromes t
+          , prefixPals = newMaxPrefix : prefixPals t
           }
   where
-    checkSuffix t'
-      | len (maxPrefix t') == strLen t' = t' { strPrefix = [], maxSuffix = maxPrefix t'}
-      | otherwise                       = t'
+    checkSuffix t' -- TODO Here should be updating mechanism
+      | len (maxPrefix t') == strLen t' = t' { strPrefix = [], maxSuffix = maxPrefix t', suffixPals = suffixPals (eertree' (fromEERTREE t')) }
+      | otherwise                       = t' { suffixPals = suffixPals (eertree' (fromEERTREE t')) }  
 
 -- | Add a symbol to the end of a string
 -- corresponding to an eertree.
@@ -244,7 +202,7 @@ append c t = checkPrefix $
       , maxSuffix = edge c (maxSuffix t)
       , strPrefix = cs
       , strSuffix = strSuffix t ++ [c]
-      , palindromes = edge c (maxSuffix t) : palindromes t
+      , suffixPals = edge c (maxSuffix t) : suffixPals t
       }
     _ ->
       case newSuffixOf c (maxSuffix t) of
@@ -255,12 +213,12 @@ append c t = checkPrefix $
               let n = len (maxSuffix t) - len newMaxSuffix + 1
                in reverse (take n (value (maxSuffix t))) ++ strPrefix t
           , strSuffix = strSuffix t ++ [c]
-          , palindromes = newMaxSuffix : palindromes t
+          , suffixPals = newMaxSuffix : suffixPals t
           }
   where
-    checkPrefix t'
-      | len (maxSuffix t') == strLen t' = t' { strSuffix = [], maxPrefix = maxSuffix t'}
-      | otherwise                       = t'
+    checkPrefix t' -- TODO Here should be updating mechanism
+      | len (maxSuffix t') == strLen t' = t' { strSuffix = [], maxPrefix = maxSuffix t', prefixPals = prefixPals (eertree (fromEERTREE t'))}
+      | otherwise                       = t' { prefixPals = prefixPals (eertree (fromEERTREE t')) }
 
 
 -- * Applications
@@ -270,7 +228,7 @@ append c t = checkPrefix $
 -- >>> subpalindromes @2 [0,1,0,0,1]
 -- [[0,1,0],[1,0,0,1],[0,0],[0],[1]]
 subpalindromes :: KnownNat n => [Symbol n] -> [[Symbol n]]
-subpalindromes = map value . nub . palindromes . eertree
+subpalindromes = map value . nub . prefixPals . eertree
 
 -- | Compute first \(n\) elements of <https://oeis.org/A216264 A216264 sequence>
 -- (binary rich strings count for \(n = 0, 1, \ldots\)).
@@ -325,5 +283,5 @@ richSubEERTREEs t =
   [ t'
   | c <- alphabet @n
   , let t' = prepend c t
-  , maxPrefix t' `notElem` palindromes t
+  , maxPrefix t' `notElem` prefixPals t
   ]
