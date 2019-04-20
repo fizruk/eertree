@@ -333,15 +333,6 @@ prepend c t =
 subpalindromes ::  [Symbol n] -> [[Symbol n]]
 subpalindromes = map value . nub . palindromes . eertree
 
-numpal ::  [Symbol n] -> Int
-numpal = sum . map (length . suffixes) . palindromes . eertree
-  where
-    suffixes :: Node n -> [Node n]
-    suffixes node
-      | len node <= 0 = []
-      | otherwise = node : suffixes maxsuf
-        where
-          maxsuf = maximumBy (comparing len) (IntMap.elems (links node))
 
 fromString :: String -> [Symbol n]
 fromString = map fromChar
@@ -353,7 +344,10 @@ fromSymbolList = map fromOrd
   where
     fromOrd c = chr(fromSymbol c + ord 'A')
 
+solve :: [Node n] -> Node n
+solve = foldr1 (\x y ->if len x >= len y then x else y)
+
 main :: IO ()
 main = do
   s <- getLine
-  putStrLn (fromSymbolList(value(maximum(palindromes (eertree (fromString s))))))
+  putStr (fromSymbolList(value(solve(palindromes (eertree (fromString s))))))
