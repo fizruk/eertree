@@ -4,14 +4,14 @@
 {-# LANGUAGE TypeApplications    #-}
 module EERTREE.Mergeable where
 
-import           GHC.TypeLits   (KnownNat)
+import           Data.Function  (on)
 import           Data.List      (sortBy)
-import Data.List (nubBy)
-import Data.Function (on)
+import           Data.List      (nubBy)
 import           EERTREE.Node
 import           EERTREE.Simple (EERTREE (..))
 import qualified EERTREE.Simple as Simple
 import           EERTREE.Symbol
+import           GHC.TypeLits   (KnownNat)
 
 -- $setup
 -- >>> :set -XTypeApplications -XDataKinds
@@ -23,17 +23,23 @@ data M n = M
   , backward :: EERTREE n -- ^ Eertree for suffixes.
   } deriving (Eq, Ord, Show)
 
+instance KnownNat n => Semigroup (M n) where
+  (<>) = mergeCorrToRight
+
+instance KnownNat n => Monoid (M n) where
+  mempty = empty
+
 -- | An empty double-ended eertree.
 --
 -- >>> empty @2
--- M 
---   { forward = EERTREE 
+-- M
+--   { forward = EERTREE
 --     { strLen = 0
 --     , maxPrefix = fromPalindrome []
 --     , strSuffix = []
 --     , palindromes = []
 --     }
---   , backward = EERTREE 
+--   , backward = EERTREE
 --     { strLen = 0
 --     , maxPrefix = fromPalindrome []
 --     , strSuffix = []
@@ -47,8 +53,8 @@ empty = M Simple.empty Simple.empty
 --
 -- >>> fromM (reverseM (leftToRight  @2 [1, 0, 0, 0]))
 -- [0,0,0,1]
-{-# RULES 
-  "reverseM/reverseM" reverseM . reverseM = id 
+{-# RULES
+  "reverseM/reverseM" reverseM . reverseM = id
 #-}
 reverseM :: M n -> M n
 reverseM (M f b) = M b f
@@ -56,14 +62,14 @@ reverseM (M f b) = M b f
 -- | Analyse a string by building an double-ended eertree using prepend.
 --
 -- >>> rightToLeft @2 [1, 0, 0, 0]
--- M 
---  { forward = EERTREE 
+-- M
+--  { forward = EERTREE
 --    { strLen      = 4
---    , maxPrefix   = fromPalindrome [1] 
+--    , maxPrefix   = fromPalindrome [1]
 --    , strSuffix   = [0,0,0]
 --    , palindromes = [fromPalindrome [1],fromPalindrome [0,0,0],fromPalindrome [0,0],fromPalindrome [0]]
 --    }
---  , backward = EERTREE 
+--  , backward = EERTREE
 --    { strLen      = 4
 --    , maxPrefix   = fromPalindrome [0,0,0]
 --    , strSuffix   = [1]
@@ -76,14 +82,14 @@ rightToLeft = foldr prepend empty
 -- | Analyse a string by building an double-ended eertree using append.
 --
 -- >>> leftToRight  @2 [1, 0, 0, 0]
--- M 
---  { forward = EERTREE 
+-- M
+--  { forward = EERTREE
 --    { strLen = 4
 --    , maxPrefix = fromPalindrome [1]
 --    , strSuffix = [0,0,0]
 --    , palindromes = [fromPalindrome [1],fromPalindrome [0,0,0],fromPalindrome [0,0],fromPalindrome [0]]
 --    }
---  , backward = EERTREE 
+--  , backward = EERTREE
 --    { strLen = 4
 --    , maxPrefix = fromPalindrome [0,0,0]
 --    , strSuffix = [1]
@@ -94,6 +100,9 @@ rightToLeft = foldr prepend empty
 --  prop> leftToRight @2 (listMod xs) == rightToLeft (listMod xs)
 leftToRight :: KnownNat n => [Symbol n] -> M n
 leftToRight = foldl (flip append) empty
+
+eertreeMod :: KnownNat n => [Int] -> M n
+eertreeMod = rightToLeft . listMod
 
 -- | Get the string back from an double-ended eertree.
 --
@@ -178,42 +187,49 @@ popLeft m@M{..} =
 --
 -- prop> (length xs > 2) ==> popRight @2 (leftToRight (listMod xs)) == Just(last (fromM(leftToRight (listMod xs))),(leftToRight (init (listMod (xs)))))
 popRight :: KnownNat n => M n -> Maybe (Symbol n, M n)
-popRight t = 
-  case popLeft(reverseM t) of 
-    Nothing     -> Nothing
+popRight t =
+  case popLeft(reverseM t) of
+    Nothing      -> Nothing
     Just (c, t') -> Just (c, (reverseM t'))
 
--- prop>  mergeCorrToRight @2 (leftToRight (listMod xs)) (leftToRight (listMod xy)) == leftToRight (listMod (xs ++ xy))
+-- prop> mergeCorrToRight @2 (eertreeMod xs) (eertreeMod xy) == eertreeMod (xs ++ xy)
 mergeCorrToRight :: forall n . KnownNat n => M n -> M n -> M n
-mergeCorrToRight l r = (((glue formedTree listReplace)))
+mergeCorrToRight l r = glue formedTree listReplace
   where
-    newLen = strLen (forward l) + strLen(forward r) 
+    newLen = strLen (forward l) + strLen (forward r)
     newStr = fromM l ++ fromM r
-    formedTree  = fst smartAppend
-    listReplace = pickBest ((snd smartAppend))
-    preprocess  = map (\x -> (strLen(forward formedTree) - fst x + len (snd x) ,snd x))
-    suffixList =  palindromes(backward r) ++ palindromes(backward l)
-    smartAppend = let k = applyPrepend' (r, [])  (value $ maxPrefix $ backward l)
-                  in addRight k (strSuffix (backward l))
-                  where
-                    applyPrepend' :: KnownNat n => (M n, [(Int, Node n)]) -> [Symbol n] -> (M n, [(Int, Node n)])
-                    applyPrepend' t []     = t 
-                    applyPrepend' t (c:cs) = applyPrepend' (newTree, combine) cs 
-                        where
-                            newResult = prepend' c (fst t)
-                            newTree   = fst newResult
-                            pals      = snd newResult
-                            combine  = (filter (\x -> len (suffixList !! (newLen  - (fst x ))) < len (snd x)))  (map (\x -> (newLen - strLen(forward newTree) + (len x),x)) pals) ++ (snd t)
-                            
-                    addRight t' []       = t'
-                    addRight t' s@(c:cs) =
-                      case strSuffix (forward(fst t')) of
-                        c':_ | c' == c 
-                            -> addRight (applyPrepend' t' [c]) cs
-                        _    | len (newSuffixOf c (maxPrefix (forward (fst t')))) > (strLen (forward l)) - (length cs) 
-                            -> addRight (applyPrepend' t' [c]) cs
-                        _   -> t'
-    
+    listReplace = pickBest replaceLists
+    suffixList =  palindromes (backward r) ++ palindromes (backward l)
+    (formedTree, replaceLists) =
+      let k = applyPrepend' (r, []) (value (maxPrefix (backward l)))
+       in addRight k (strSuffix (backward l))
+
+    applyPrepend'
+      :: KnownNat n
+      => (M n, [(Int, Node n)])
+      -> [Symbol n]
+      -> (M n, [(Int, Node n)])
+    applyPrepend' t []     = t
+    applyPrepend' (t, ps) (c:cs) = applyPrepend' (newTree, combine) cs
+        where
+            (newTree, pals) = prepend' c t
+            combine   =
+              [ (i, p)
+              | p <- pals
+              , let i = newLen - strLen (forward newTree) + len p
+              -- FIXME: why > and >= both work in the next line?
+              , i > strLen (forward l)  --
+              ] ++ ps
+
+    addRight t' []       = t'
+    addRight t' s@(c:cs) =
+      case strSuffix (forward (fst t')) of
+        c':_ | c' == c
+            -> addRight (applyPrepend' t' [c]) cs
+        _    | len (newSuffixOf c (maxPrefix (forward (fst t')))) > (strLen (forward l)) - (length cs)
+            -> addRight (applyPrepend' t' [c]) cs
+        _   -> t'
+
     -- (a -> a -> a) -> [a] -> [a]
     pickBest = nubBy ((==) `on` fst) . sortBy sortGT
       where
@@ -224,13 +240,13 @@ mergeCorrToRight l r = (((glue formedTree listReplace)))
 
     glue ::  KnownNat n => M n -> [(Int, Node n)] -> M n
     glue t g = t
-          { forward = EERTREE 
+          { forward = EERTREE
             { strLen = newLen
             , maxPrefix = newMaxPrefix
-            , strSuffix = drop (len newMaxPrefix) newStr 
+            , strSuffix = drop (len newMaxPrefix) newStr
             , palindromes = take leftOver (palindromes(forward l)) ++ palindromes(forward t)
             }
-          , backward = EERTREE 
+          , backward = EERTREE
             { strLen = newLen
             , maxPrefix = newMaxSuffix
             , strSuffix = reverse(take (newLen - len newMaxSuffix) newStr)
@@ -239,14 +255,14 @@ mergeCorrToRight l r = (((glue formedTree listReplace)))
           }
       where
         leftOver = newLen - strLen (forward t)
-        newMaxPrefix 
+        newMaxPrefix
           | leftOver == 0 = maxPrefix (forward t)
-          | otherwise     = maxPrefix (forward l) 
+          | otherwise     = maxPrefix (forward l)
         newSuffixPals = updatePalindromes fst snd newLen suffixList g
-        newMaxSuffix 
-          | length newSuffixPals > 0 = head newSuffixPals
-          | otherwise  = evenNode @n
-        
+        newMaxSuffix =
+          case newSuffixPals of
+            (p:_) -> p
+            _     -> evenNode
 
 merge :: KnownNat n => M n -> M n -> M n
 merge l r
@@ -258,16 +274,16 @@ mergeToLeft :: KnownNat n => M n -> M n -> M n
 mergeToLeft l r =
   let t = foldl (flip append) l (value (maxPrefix (forward r)))
   in addLeft t (strSuffix (forward r))
-  where  
+  where
     addLeft t []       = t
-    addLeft t s@(c:cs) = 
+    addLeft t s@(c:cs) =
       case strSuffix (backward t) of
         c':_ | c' == c -> addLeft (append c t) cs
         _    | len (newSuffixOf c (maxPrefix (backward t))) > (strLen (forward r)) - (length cs)  -> addLeft (append c t) cs
         _ -> t -- TODO: simple gluing
 
 mergeToRight :: KnownNat n => M n -> M n -> M n
-mergeToRight l r = 
+mergeToRight l r =
   let t = foldr prepend r (value (maxPrefix (backward l)))
   in addRight t (strSuffix (backward l))
   where
