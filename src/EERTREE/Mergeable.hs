@@ -217,9 +217,9 @@ mergeToRight l r = glue formedTree listReplace
             combine   =
               [ (i, p)
               | p <- pals
-              , let i = newLen - strLen (forward newTree) + len p
+              , let i = strLen(forward r) - strLen (forward newTree) + len p
               -- FIXME: why > and >= both work in the next line?
-              , i > strLen (forward l)  --
+              , i > 0  --
               ] ++ ps
 
     addRight t' []       = t'
@@ -259,8 +259,7 @@ mergeToRight l r = glue formedTree listReplace
         newMaxPrefix
           | leftOver == 0 = maxPrefix (forward t)
           | otherwise     = maxPrefix (forward l)
-        newSuffixPals = updatePalindromes fst snd newLen suffixList g --FIXME: don't need to go through whole list
-        suffixList = palindromes (backward r) ++ palindromes (backward l)
+        newSuffixPals = updatePalindromes fst snd (strLen (backward r)) (palindromes (backward r)) g  ++ palindromes (backward l)
         newMaxSuffix =
           case newSuffixPals of
             (p:_) -> p
