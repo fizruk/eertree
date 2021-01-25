@@ -20,6 +20,8 @@ import           EERTREE.Symbol
 data EERTREE n = EERTREE
   { strLen      :: !Int       -- ^ Length of the analysed string.
   , maxPrefix   :: Node n     -- ^ Maximum palindromic prefix.
+  , maxSuffix   :: Node n     -- ^ Maximum palindromic suffix
+  , strPrefix   :: [Symbol n] -- ^ Prefix, preceding maximum palindromic suffix
   , strSuffix   :: [Symbol n] -- ^ Suffix, following maximum palindromic prefix.
   , palindromes :: [Node n]   -- ^ Accumulated list of encountered palindromes.
   } deriving (Show)
@@ -29,6 +31,8 @@ empty :: forall n. KnownNat n => EERTREE n
 empty = EERTREE
   { strLen      = 0
   , maxPrefix   = evenNode @n
+  , maxSuffix   = evenNode @n
+  , strPrefix   = []
   , strSuffix   = []
   , palindromes = []
   }
@@ -52,20 +56,65 @@ prepend c t =
   case strSuffix t of
     c':cs | c == c' -> EERTREE
       { strLen = strLen t + 1
-      , maxPrefix = edge c (maxPrefix t)
+      , maxPrefix = newMaxPrefix
+      , maxSuffix = if null cs then newMaxPrefix else maxSuffix t
+      , strPrefix = if null cs then cs else c : strPrefix t
       , strSuffix = cs
-      , palindromes = edge c (maxPrefix t) : palindromes t
-      }
+      , palindromes = newMaxPrefix : palindromes t
+      } where
+        newMaxPrefix = edge c (maxPrefix t)
     _ ->
       case newSuffixOf c (maxPrefix t) of
         newMaxPrefix -> EERTREE
           { strLen = strLen t + 1
           , maxPrefix = newMaxPrefix
-          , strSuffix =
-              let n = len newMaxPrefix
-               in drop n (c : value (maxPrefix t)) ++ strSuffix t
+          , maxSuffix = if null newStrSuffix then newMaxPrefix else maxSuffix t
+          , strPrefix = if null newStrSuffix then newStrSuffix else c : strPrefix t
+          , strSuffix = newStrSuffix
           , palindromes = newMaxPrefix : palindromes t
-          }
+          } where
+            newStrSuffix =
+              let n = len newMaxPrefix
+                in drop n (c : value (maxPrefix t)) ++ strSuffix t
+
+
+-- | Add a symbol to the end of a string
+-- corresponding to an eertree
+append :: KnownNat n => Symbol n -> EERTREE n -> EERTREE n
+append c t =
+  case strPrefix t of
+    c':cs | c == c' -> EERTREE
+      { strLen = strLen t + 1
+      , maxPrefix = if null cs then newMaxSuffix else maxPrefix t
+      , maxSuffix = newMaxSuffix
+      , strPrefix = cs
+      , strSuffix = if null cs then cs else strSuffix t ++ [c]
+      , palindromes = newMaxSuffix : palindromes t
+      } where
+        newMaxSuffix = edge c (maxSuffix t)
+    _ ->
+      case newSuffixOf c (maxSuffix t) of
+        newMaxSuffix -> EERTREE
+          { strLen = strLen t + 1
+          , maxPrefix = if null newStrPrefix then newMaxSuffix else maxPrefix t
+          , maxSuffix = newMaxSuffix
+          , strPrefix = newStrPrefix
+          , strSuffix = if null newStrPrefix then newStrPrefix else strSuffix t ++ [c]
+          , palindromes = newMaxSuffix : palindromes t
+          } where
+            newStrPrefix =
+              let n = len newMaxSuffix
+                in take (strLen t + 1 - n) (value (maxPrefix t) ++ strSuffix t ++ [c])
+
+
+-- | Merge two eertrees
+merge :: KnownNat n => EERTREE n -> EERTREE n -> EERTREE n
+merge t1 t2
+  | strLen t1 < strLen t2 = foldr prepend t2 s1
+  | otherwise             = foldr append t1 s2
+    where
+      s1 = fromEERTREE t1
+      s2 = reverse (fromEERTREE t2)
 
 -- * Applications
 
