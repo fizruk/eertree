@@ -3,7 +3,10 @@
 {-# LANGUAGE TypeApplications    #-}
 module EERTREE.Simple where
 
+import           Data.Char                   (digitToInt)
 import           Data.List                   (nub)
+import           Data.Sequence               (Seq)
+import qualified Data.Sequence               as Seq
 import           GHC.TypeLits                (KnownNat)
 
 import           Control.Monad.ST            (runST)
@@ -18,12 +21,12 @@ import           EERTREE.Symbol
 
 -- | A palindromic tree for some string with auxillary information.
 data EERTREE n = EERTREE
-  { strLen      :: !Int       -- ^ Length of the analysed string.
-  , maxPrefix   :: Node n     -- ^ Maximum palindromic prefix.
-  , maxSuffix   :: Node n     -- ^ Maximum palindromic suffix
-  , strPrefix   :: [Symbol n] -- ^ Prefix, preceding maximum palindromic suffix
-  , strSuffix   :: [Symbol n] -- ^ Suffix, following maximum palindromic prefix.
-  , palindromes :: [Node n]   -- ^ Accumulated list of encountered palindromes.
+  { strLen      :: !Int           -- ^ Length of the analysed string.
+  , maxPrefix   :: Node n         -- ^ Maximum palindromic prefix.
+  , maxSuffix   :: Node n         -- ^ Maximum palindromic suffix
+  , strPrefix   :: Seq (Symbol n) -- ^ Prefix, preceding maximum palindromic suffix
+  , strSuffix   :: Seq (Symbol n) -- ^ Suffix, following maximum palindromic prefix.
+  , palindromes :: [Node n]       -- ^ Accumulated list of encountered palindromes.
   } deriving (Show)
 
 -- | An empty eertree.
@@ -32,8 +35,8 @@ empty = EERTREE
   { strLen      = 0
   , maxPrefix   = evenNode @n
   , maxSuffix   = evenNode @n
-  , strPrefix   = []
-  , strSuffix   = []
+  , strPrefix   = Seq.empty
+  , strSuffix   = Seq.empty
   , palindromes = []
   }
 
@@ -42,23 +45,41 @@ singleton :: KnownNat n => Symbol n -> EERTREE n
 singleton c = prepend c empty
 
 -- | Analyse a string by building an eertree.
-eertree :: KnownNat n => [Symbol n] -> EERTREE n
+eertree :: KnownNat n => Seq (Symbol n) -> EERTREE n
 eertree = foldr prepend empty
 
+eertreeFromList :: KnownNat n => [Symbol n] -> EERTREE n
+eertreeFromList = foldr prepend empty
+
+eertreeFromString :: KnownNat n => String -> EERTREE n
+eertreeFromString s = eertreeFromList (map (Symbol . digitToInt) s)
+
 -- | Get the string back from an eertree.
-fromEERTREE :: EERTREE n -> [Symbol n]
-fromEERTREE t = value (maxPrefix t) ++ strSuffix t
+fromEERTREE :: EERTREE n -> Seq (Symbol n)
+fromEERTREE t = value (maxPrefix t) <> strSuffix t
+
+-- | Get the reversed string from an eertree
+reverseFromEERTREE :: EERTREE n -> Seq (Symbol n)
+reverseFromEERTREE t = value (maxSuffix t) <> reversedStrPrefix
+  where
+    reversedStrPrefix = reverseSeq (strPrefix t)
+
+-- | Reverse a sequence
+reverseSeq :: Seq (Symbol m) -> Seq (Symbol m)
+reverseSeq s = case Seq.viewr s of
+  Seq.EmptyR    -> Seq.empty
+  (xs Seq.:> x) -> x Seq.<| reverseSeq xs
 
 -- | Add a symbol to the beginning of a string
 -- corresponding to an eertree.
 prepend :: KnownNat n => Symbol n -> EERTREE n -> EERTREE n
 prepend c t =
-  case strSuffix t of
-    c':cs | c == c' -> EERTREE
+  case Seq.viewl (strSuffix t) of
+    c' Seq.:< cs | c == c' -> EERTREE
       { strLen = strLen t + 1
       , maxPrefix = newMaxPrefix
       , maxSuffix = if null cs then newMaxPrefix else maxSuffix t
-      , strPrefix = if null cs then cs else c : strPrefix t
+      , strPrefix = if null cs then cs else c Seq.<| strPrefix t
       , strSuffix = cs
       , palindromes = newMaxPrefix : palindromes t
       } where
@@ -69,26 +90,26 @@ prepend c t =
           { strLen = strLen t + 1
           , maxPrefix = newMaxPrefix
           , maxSuffix = if null newStrSuffix then newMaxPrefix else maxSuffix t
-          , strPrefix = if null newStrSuffix then newStrSuffix else c : strPrefix t
+          , strPrefix = if null newStrSuffix then newStrSuffix else c Seq.<| strPrefix t
           , strSuffix = newStrSuffix
           , palindromes = newMaxPrefix : palindromes t
           } where
             newStrSuffix =
               let n = len newMaxPrefix
-                in drop n (c : value (maxPrefix t)) ++ strSuffix t
+                in Seq.drop n (c Seq.<| value (maxPrefix t)) <> strSuffix t
 
 
 -- | Add a symbol to the end of a string
 -- corresponding to an eertree
 append :: KnownNat n => Symbol n -> EERTREE n -> EERTREE n
 append c t =
-  case strPrefix t of
-    c':cs | c == c' -> EERTREE
+  case Seq.viewr (strPrefix t) of
+    cs Seq.:> c' | c == c' -> EERTREE
       { strLen = strLen t + 1
       , maxPrefix = if null cs then newMaxSuffix else maxPrefix t
       , maxSuffix = newMaxSuffix
       , strPrefix = cs
-      , strSuffix = if null cs then cs else strSuffix t ++ [c]
+      , strSuffix = if null cs then cs else strSuffix t Seq.|> c
       , palindromes = newMaxSuffix : palindromes t
       } where
         newMaxSuffix = edge c (maxSuffix t)
@@ -99,12 +120,12 @@ append c t =
           , maxPrefix = if null newStrPrefix then newMaxSuffix else maxPrefix t
           , maxSuffix = newMaxSuffix
           , strPrefix = newStrPrefix
-          , strSuffix = if null newStrPrefix then newStrPrefix else strSuffix t ++ [c]
+          , strSuffix = if null newStrPrefix then newStrPrefix else strSuffix t Seq.|> c
           , palindromes = newMaxSuffix : palindromes t
           } where
             newStrPrefix =
               let n = len newMaxSuffix
-                in take (strLen t + 1 - n) (value (maxPrefix t) ++ strSuffix t ++ [c])
+                in Seq.take (strLen t + 1 - n) (value (maxPrefix t) <> strSuffix t Seq.|> c)
 
 
 -- | Merge two eertrees
@@ -114,7 +135,24 @@ merge t1 t2
   | otherwise             = foldr append t1 s2
     where
       s1 = fromEERTREE t1
-      s2 = reverse (fromEERTREE t2)
+      s2 = reverseSeq (fromEERTREE t2)
+      {- 
+      -- | Center indexes of max suffix/prefix
+      len1 = len (maxSuffix t1) `div` 2
+      len2 = len (maxPrefix t2) `div` 2
+
+      -- | Strings to add
+      s1 = Seq.take len1 (value (maxSuffix t1))
+      s2 = takeLastReversed len2 (value (maxPrefix t2))
+
+      -- | Take last @i@ elements of a sequence in reversed order
+      takeLastReversed :: Int -> Seq (Symbol m) -> Seq (Symbol m)
+      takeLastReversed i s
+        | i == 0 = Seq.empty
+        | otherwise = case Seq.viewr s of
+          Seq.EmptyR    -> Seq.empty
+          (xs Seq.:> x) -> x Seq.<| takeLastReversed (i - 1) xs
+      -}
 
 -- * Applications
 
@@ -122,7 +160,7 @@ merge t1 t2
 --
 -- >>> subpalindromes @2 [0,1,0,0,1]
 -- [[0,1,0],[1,0,0,1],[0,0],[0],[1]]
-subpalindromes :: KnownNat n => [Symbol n] -> [[Symbol n]]
+subpalindromes :: KnownNat n => Seq (Symbol n) -> [Seq (Symbol n)]
 subpalindromes = map value . nub . palindromes . eertree
 
 -- | Compute first \(n\) elements of <https://oeis.org/A216264 A216264 sequence>
