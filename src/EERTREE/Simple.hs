@@ -20,7 +20,7 @@ import           EERTREE.Node
 import           EERTREE.Symbol
 
 -- $setup
--- >>> :set -XTypeApplications -XDataKinds
+-- >>> :set -XTypeApplications -XDataKinds -XOverloadedStrings
 
 -- | A palindromic tree for some string with auxillary information.
 data EERTREE n = EERTREE
@@ -51,14 +51,11 @@ singleton :: KnownNat n => Symbol n -> EERTREE n
 singleton c = prepend c empty
 
 -- | Analyse a string by building an eertree.
-eertree :: KnownNat n => Seq (Symbol n) -> EERTREE n
+eertree :: KnownNat n => [Symbol n] -> EERTREE n
 eertree = foldr prepend empty
 
-eertreeFromList :: KnownNat n => [Symbol n] -> EERTREE n
-eertreeFromList = foldr prepend empty
-
 eertreeFromString :: KnownNat n => String -> EERTREE n
-eertreeFromString s = eertreeFromList (map (Symbol . digitToInt) s)
+eertreeFromString s = eertree (map (Symbol . digitToInt) s)
 
 -- | Get the string back from an eertree.
 fromEERTREE :: EERTREE n -> [Symbol n]
@@ -196,7 +193,7 @@ mergeLinear t1 t2
 --
 -- >>> subpalindromes @2 [0,1,0,0,1]
 -- [[0,1,0],[1,0,0,1],[0,0],[0],[1]]
-subpalindromes :: KnownNat n => Seq (Symbol n) -> [[(Symbol n)]]
+subpalindromes :: KnownNat n => [Symbol n] -> [[(Symbol n)]]
 subpalindromes = map value . nub . (F.toList . palindromes) . eertree
 
 -- | Compute first \(n\) elements of <https://oeis.org/A216264 A216264 sequence>
