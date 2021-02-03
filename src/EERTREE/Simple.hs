@@ -15,7 +15,6 @@ import           Control.Monad.ST            (runST)
 import qualified Data.Vector.Unboxed         as UVector
 import qualified Data.Vector.Unboxed.Mutable as MVector
 
-import           Debug.Trace
 import           EERTREE.Node
 import           EERTREE.Symbol
 
@@ -100,7 +99,6 @@ prepend c t =
               newStrSuffix = Seq.fromList (drop n (c : fromEERTREE t))
               n = len newMaxPrefix
 
-
 -- | Add a symbol to the end of a string
 -- corresponding to an eertree
 append :: KnownNat n => Symbol n -> EERTREE n -> EERTREE n
@@ -109,27 +107,36 @@ append c t = reverseEERTREE (prepend c (reverseEERTREE t))
 -- | Merge two eertrees in O(1) amortized
 --
 -- >>> fromEERTREE (merge @2 "0110100" "11001001")
--- fromList [0,1,1,0,1,0,0,1,1,0,0,1,0,0,1]
+-- [0,1,1,0,1,0,0,1,1,0,0,1,0,0,1]
+--
+-- >>> fromEERTREE (merge @2 "10010011" "0010110")
+-- [1,0,0,1,0,0,1,1,0,0,1,0,1,1,0]
 merge :: KnownNat n => EERTREE n -> EERTREE n -> EERTREE n
 merge t1 t2
-  | strLen t1 < strLen t2 = mergeLeft s1 t2 []
+  | strLen t1 < strLen t2 = mergeLeft  s1 t2 []
   | otherwise             = mergeRight t1 s2 []
     where
       -- | Centers of max suffix and prefix
       c1 = fromIntegral (strLen t1) - fromIntegral (len (maxSuffix t1)) / 2
       c2 = fromIntegral (strLen t1) + fromIntegral (len (maxPrefix t2)) / 2
 
-      -- | Values of each tree
+      -- | Strings representing the eertrees
       s1 = reverseFromEERTREE t1
       s2 = fromEERTREE t2
 
       pals1 = palindromes t1
       pals2 = palindromes t2
 
+      -- | Merge by prepending symbols to `t2`
       mergeLeft s1' t2' pals
         | null s1'           = t2'
         | c1 <= newPalCenter = mergeLeft cs (prepend c t2') (newPal : pals)
-        | otherwise          = t2' { palindromes = pals1 <> pals2 <> pals }
+        | otherwise          = t2' { strLen            = strLen t1 + strLen t2
+                                   , maxPrefix         = maxPrefix t1
+                                   , strReversedPrefix = strReversedPrefix t2' <> Seq.fromList s1'
+                                   , strSuffix         = strSuffix t1 <> Seq.fromList (fromEERTREE t2)
+                                   , palindromes       = pals1 <> pals2 <> pals
+                                   }
         where
           -- | Symbol to prepend
           (cs, c) = case s1' of
@@ -138,16 +145,22 @@ merge t1 t2
 
           -- | New palindrome
           newPal = case Seq.viewl (strSuffix t2') of
-            x Seq.:< _ | c == x -> edge c (maxSuffix t2')
+            x Seq.:< _ | c == x -> edge c (maxPrefix t2')
             _                   -> newSuffixOf c (maxPrefix t2')
 
           -- | Center of a new palindrome
           newPalCenter = fromIntegral (length s1') + fromIntegral (len newPal) / 2
 
+      -- | Merge by appending symbols to `t1`
       mergeRight t1' s2' pals
         | null s2'           = t1'
         | newPalCenter <= c2 = mergeRight (append c t1') cs (newPal : pals)
-        | otherwise          = t1' { palindromes = pals1 <> pals2 <> pals }
+        | otherwise          = t1' { strLen            = strLen t1 + strLen t2
+                                   , maxSuffix         = maxSuffix t2
+                                   , strReversedPrefix = strReversedPrefix t2 <> Seq.fromList (reverseFromEERTREE t1)
+                                   , strSuffix         = strSuffix t1' <> Seq.fromList s2'
+                                   , palindromes       = pals1 <> pals2 <> pals
+                                   }
         where
           -- | Symbol to append
           (c, cs) = case s2' of
