@@ -29,7 +29,7 @@ data EERTREE n = EERTREE
   , maxSuffix         :: Node n         -- ^ Maximum palindromic suffix
   , strReversedPrefix :: Seq (Symbol n) -- ^ Prefix, preceding maximum palindromic suffix
   , strSuffix         :: Seq (Symbol n) -- ^ Suffix, following maximum palindromic prefix.
-  , palindromes       :: Seq (Node n)   -- ^ Accumulated list of encountered palindromes.
+  , palindromes       :: [Node n]       -- ^ Accumulated list of encountered palindromes.
   } deriving (Eq, Show)
 
 instance KnownNat n => IsString (EERTREE n) where
@@ -38,12 +38,12 @@ instance KnownNat n => IsString (EERTREE n) where
 -- | An empty eertree.
 empty :: forall n. KnownNat n => EERTREE n
 empty = EERTREE
-  { strLen      = 0
-  , maxPrefix   = evenNode @n
-  , maxSuffix   = evenNode @n
+  { strLen              = 0
+  , maxPrefix           = evenNode @n
+  , maxSuffix           = evenNode @n
   , strReversedPrefix   = Seq.empty
-  , strSuffix   = Seq.empty
-  , palindromes = Seq.empty
+  , strSuffix           = Seq.empty
+  , palindromes         = []
   }
 
 -- | An eertree for a singleton string.
@@ -56,6 +56,14 @@ eertree = foldr prepend empty
 
 eertreeFromString :: KnownNat n => String -> EERTREE n
 eertreeFromString s = eertree (map (Symbol . digitToInt) s)
+
+-- | EERTREE of a reversed string
+reverseEERTREE :: KnownNat n => EERTREE n -> EERTREE n
+reverseEERTREE t = t { maxPrefix         = maxSuffix t
+                     , maxSuffix         = maxPrefix t
+                     , strReversedPrefix = strSuffix t
+                     , strSuffix         = strReversedPrefix t
+                     }
 
 -- | Get the string back from an eertree.
 fromEERTREE :: EERTREE n -> [Symbol n]
@@ -76,7 +84,7 @@ prepend c t =
       , maxSuffix = if null cs then newMaxPrefix else maxSuffix t
       , strReversedPrefix = if null cs then cs else strReversedPrefix t Seq.|> c
       , strSuffix = cs
-      , palindromes = newMaxPrefix Seq.<| palindromes t
+      , palindromes = newMaxPrefix : palindromes t
       } where
         newMaxPrefix = edge c (maxPrefix t)
     _ ->
@@ -87,7 +95,7 @@ prepend c t =
           , maxSuffix = if null newStrSuffix then newMaxPrefix else maxSuffix t
           , strReversedPrefix = if null newStrSuffix then Seq.empty else strReversedPrefix t Seq.|> c
           , strSuffix = newStrSuffix
-          , palindromes = newMaxPrefix Seq.<| palindromes t
+          , palindromes = newMaxPrefix : palindromes t
           } where
               newStrSuffix = Seq.fromList (drop n (c : fromEERTREE t))
               n = len newMaxPrefix
@@ -104,7 +112,7 @@ append c t =
       , maxSuffix = newMaxSuffix
       , strReversedPrefix = cs
       , strSuffix = if null cs then cs else strSuffix t Seq.|> c
-      , palindromes = newMaxSuffix Seq.<| palindromes t
+      , palindromes = newMaxSuffix : palindromes t
       } where
         newMaxSuffix = edge c (maxSuffix t)
     _ ->
@@ -115,7 +123,7 @@ append c t =
           , maxSuffix = newMaxSuffix
           , strReversedPrefix = newStrPrefix
           , strSuffix = if null newStrPrefix then newStrPrefix else strSuffix t Seq.|> c
-          , palindromes = newMaxSuffix Seq.<| palindromes t
+          , palindromes = newMaxSuffix : palindromes t
           } where
               newStrPrefix = Seq.fromList (drop n (c : reverseFromEERTREE t))
               n = len newMaxSuffix
@@ -126,8 +134,8 @@ append c t =
 -- fromList [0,1,1,0,1,0,0,1,1,0,0,1,0,0,1]
 merge :: KnownNat n => EERTREE n -> EERTREE n -> EERTREE n
 merge t1 t2
-  | strLen t1 < strLen t2 = mergeLeft s1 t2 Seq.empty
-  | otherwise             = mergeRight t1 s2 Seq.empty
+  | strLen t1 < strLen t2 = mergeLeft s1 t2 []
+  | otherwise             = mergeRight t1 s2 []
     where
       -- | Centers of max suffix and prefix
       c1 = fromIntegral (strLen t1) - fromIntegral (len (maxSuffix t1)) / 2
@@ -140,10 +148,9 @@ merge t1 t2
       pals1 = palindromes t1
       pals2 = palindromes t2
 
-      -- mergeLeft :: KnownNat m => Seq (Symbol m) -> EERTREE m -> Seq (Node m) -> EERTREE m
       mergeLeft s1' t2' pals
         | null s1'           = t2'
-        | c1 <= newPalCenter = mergeLeft cs (prepend c t2') (newPal Seq.<| pals)
+        | c1 <= newPalCenter = mergeLeft cs (prepend c t2') (newPal : pals)
         | otherwise          = t2' { palindromes = pals1 <> pals2 <> pals }
         where
           -- | Symbol to prepend
@@ -159,10 +166,9 @@ merge t1 t2
           -- | Center of a new palindrome
           newPalCenter = fromIntegral (length s1') + fromIntegral (len newPal) / 2
 
-      -- mergeRight :: KnownNat m => EERTREE m -> Seq (Symbol m) -> Seq (Node m) -> EERTREE m
       mergeRight t1' s2' pals
         | null s2'           = t1'
-        | newPalCenter <= c2 = mergeRight (append c t1') cs (newPal Seq.<| pals)
+        | newPalCenter <= c2 = mergeRight (append c t1') cs (newPal : pals)
         | otherwise          = t1' { palindromes = pals1 <> pals2 <> pals }
         where
           -- | Symbol to append
@@ -193,8 +199,8 @@ mergeLinear t1 t2
 --
 -- >>> subpalindromes @2 [0,1,0,0,1]
 -- [[0,1,0],[1,0,0,1],[0,0],[0],[1]]
-subpalindromes :: KnownNat n => [Symbol n] -> [[(Symbol n)]]
-subpalindromes = map value . nub . (F.toList . palindromes) . eertree
+subpalindromes :: KnownNat n => [Symbol n] -> [[Symbol n]]
+subpalindromes = map value . nub . palindromes . eertree
 
 -- | Compute first \(n\) elements of <https://oeis.org/A216264 A216264 sequence>
 -- (binary rich strings count for \(n = 0, 1, \ldots\)).
