@@ -46,17 +46,30 @@ empty = EERTREE
   }
 
 -- | An eertree for a singleton string.
+--
+-- >>> fromEERTREE (singleton @2 0)
+-- [0]
 singleton :: KnownNat n => Symbol n -> EERTREE n
 singleton c = prepend c empty
 
 -- | Analyse a string by building an eertree.
+--
+-- >>> fromEERTREE (eertree @2 [0,1,0,0,1])
+-- [0,1,0,0,1]
 eertree :: KnownNat n => [Symbol n] -> EERTREE n
 eertree = foldr prepend empty
 
+-- | Build an eertree from string
+--
+-- >>> eertreeFromString @2 "01001" == eertree @2 [0,1,0,0,1]
+-- True
 eertreeFromString :: KnownNat n => String -> EERTREE n
 eertreeFromString s = eertree (map (Symbol . digitToInt) s)
 
 -- | EERTREE of a reversed string
+--
+-- >> reverseEERTREE @2 "01001" == [1,0,0,1,0]
+-- True
 reverseEERTREE :: KnownNat n => EERTREE n -> EERTREE n
 reverseEERTREE t = t { maxPrefix         = maxSuffix t
                      , maxSuffix         = maxPrefix t
@@ -65,15 +78,24 @@ reverseEERTREE t = t { maxPrefix         = maxSuffix t
                      }
 
 -- | Get the string back from an eertree.
+--
+-- >>> fromEERTREE @2 "01001"
+-- [0,1,0,0,1]
 fromEERTREE :: EERTREE n -> [Symbol n]
 fromEERTREE t = value (maxPrefix t) <> F.toList (strSuffix t)
 
 -- | Get the reversed string from an eertree
+--
+-- >>> reverseFromEERTREE @2 "01001"
+-- [1,0,0,1,0]
 reverseFromEERTREE :: EERTREE n -> [Symbol n]
 reverseFromEERTREE t = value (maxSuffix t) <> F.toList (strReversedPrefix t)
 
 -- | Add a symbol to the beginning of a string
 -- corresponding to an eertree.
+--
+-- >>> fromEERTREE (prepend 0 (eertreeFromString @2 "01001"))
+-- [0,0,1,0,0,1]
 prepend :: KnownNat n => Symbol n -> EERTREE n -> EERTREE n
 prepend c t =
   case Seq.viewl (strSuffix t) of
@@ -101,6 +123,9 @@ prepend c t =
 
 -- | Add a symbol to the end of a string
 -- corresponding to an eertree
+--
+-- >>> fromEERTREE (append 0 (eertreeFromString @2 "01001"))
+-- [0,1,0,0,1,0]
 append :: KnownNat n => Symbol n -> EERTREE n -> EERTREE n
 append c t = reverseEERTREE (prepend c (reverseEERTREE t))
 
@@ -176,6 +201,12 @@ merge t1 t2
           newPalCenter = fromIntegral (strLen t1') - fromIntegral (len newPal) / 2
 
 -- | Merge two eertrees in min(|S1|, |S2|)
+--
+-- >>> fromEERTREE (mergeLinear @2 "0110100" "11001001")
+-- [0,1,1,0,1,0,0,1,1,0,0,1,0,0,1]
+--
+-- >>> fromEERTREE (mergeLinear @2 "10010011" "0010110")
+-- [1,0,0,1,0,0,1,1,0,0,1,0,1,1,0]
 mergeLinear :: KnownNat n => EERTREE n -> EERTREE n -> EERTREE n
 mergeLinear t1 t2
   | strLen t1 < strLen t2 = foldr prepend t2 s1
