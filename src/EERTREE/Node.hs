@@ -10,10 +10,9 @@ import           Data.Bits                    (clearBit, countTrailingZeros)
 import           Data.Coerce                  (coerce)
 import           Data.IntMap                  (IntMap)
 import qualified Data.IntMap                  as IntMap
+import qualified Data.List                    as List
 import           Data.Maybe                   (fromMaybe)
 import           Data.Ord                     (comparing)
-import           Data.Sequence                (Seq)
-import qualified Data.Sequence                as Seq
 import           Data.Vector                  (Vector)
 import qualified Data.Vector                  as Vector
 import           GHC.TypeLits                 (KnownNat, Nat)
@@ -86,15 +85,15 @@ directLink c node = fromMaybe oddNode (IntMap.lookup (coerce c) (links node))
 -- >>> fromPalindrome @2 [0,1,1]
 -- *** Exception: not a palindrome
 -- ...
-fromPalindrome :: KnownNat n => Seq (Symbol n) -> Node n
+fromPalindrome :: KnownNat n => [Symbol n] -> Node n
 fromPalindrome xs
   | not isPalindrome = error "not a palindrome"
   | even n    = foldr edge evenNode half
   | otherwise = foldr edge oddNode  half
   where
     n = length xs
-    half = Seq.take ((n + 1) `div` 2) xs
-    isPalindrome = xs == Seq.reverse xs
+    half = take ((n + 1) `div` 2) xs
+    isPalindrome = xs == reverse xs
 
 -- | Like 'symbolAt'', but tries to minimize jumps.
 --
@@ -120,17 +119,17 @@ symbolAt' i t = do
 --
 -- >>> pathTo (fromPalindrome @2 [1,1,0,1,1])
 -- [1,1,0]
-pathTo :: Node n -> Seq (Symbol n)
-pathTo = Seq.unfoldr parent
+pathTo :: Node n -> [Symbol n]
+pathTo = List.unfoldr parent
 
 -- | Value of a node (its palindrome).
 --
 -- >>> value (fromPalindrome @2 [1,1,0,1,1])
 -- [1,1,0,1,1]
-value :: Node n -> Seq (Symbol n)
+value :: Node n -> [Symbol n]
 value t
-  | even (len t) = s <> Seq.reverse s
-  | otherwise    = s <> Seq.drop 1 (Seq.reverse s)
+  | even (len t) = s <> reverse s
+  | otherwise    = s <> drop 1 (reverse s)
   where
     s = pathTo t
 
