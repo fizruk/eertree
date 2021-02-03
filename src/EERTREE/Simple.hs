@@ -104,29 +104,7 @@ prepend c t =
 -- | Add a symbol to the end of a string
 -- corresponding to an eertree
 append :: KnownNat n => Symbol n -> EERTREE n -> EERTREE n
-append c t =
-  case Seq.viewr (strReversedPrefix t) of
-    cs Seq.:> c' | c == c' -> EERTREE
-      { strLen = strLen t + 1
-      , maxPrefix = if null cs then newMaxSuffix else maxPrefix t
-      , maxSuffix = newMaxSuffix
-      , strReversedPrefix = cs
-      , strSuffix = if null cs then cs else strSuffix t Seq.|> c
-      , palindromes = newMaxSuffix : palindromes t
-      } where
-        newMaxSuffix = edge c (maxSuffix t)
-    _ ->
-      case newSuffixOf c (maxSuffix t) of
-        newMaxSuffix -> EERTREE
-          { strLen = strLen t + 1
-          , maxPrefix = if null newStrPrefix then newMaxSuffix else maxPrefix t
-          , maxSuffix = newMaxSuffix
-          , strReversedPrefix = newStrPrefix
-          , strSuffix = if null newStrPrefix then newStrPrefix else strSuffix t Seq.|> c
-          , palindromes = newMaxSuffix : palindromes t
-          } where
-              newStrPrefix = Seq.fromList (drop n (c : reverseFromEERTREE t))
-              n = len newMaxSuffix
+append c t = reverseEERTREE (prepend c (reverseEERTREE t))
 
 -- | Merge two eertrees in O(1) amortized
 --
