@@ -63,6 +63,8 @@ symbol = fmap fst . parent
 --
 -- >>> edge 1 (fromPalindrome @2 [0,1,0])
 -- fromPalindrome [1,0,1,0,1]
+-- >>> edge 0 (fromPalindrome @2 [])
+-- fromPalindrome [0,0]
 edge :: Symbol n -> Node n -> Node n
 edge c node = fromWeakly (edges node IntMap.! coerce c)
 
@@ -99,11 +101,28 @@ fromPalindrome xs
 --
 -- >>> symbolAt 3 (fromPalindrome @2 [0,1,0,1,0,1,0])
 -- Just 1
+-- >>> pal = fromPalindrome @2 [0,1,0,1,0,1,0]
+-- >>> symbolAt 1 pal == symbolAt 5 pal
+-- True
+-- >>> pal = fromPalindrome @2 [0,1,0,1,0,1,0]
+-- >>> symbolAt 3 pal == symbolAt' 3 pal
+-- True
 symbolAt :: Int -> Node n -> Maybe (Symbol n)
 symbolAt i t = symbolAt' (min i (len t - i - 1)) t
 
 -- | Find a symbol at a given position in a palindrome.
 -- Note that it does not matter from what end you start indexing.
+-- 
+-- >>> symbolAt' 0 (fromPalindrome @2 [0,1,0])
+-- Just 0
+-- >>> symbolAt' 1 ((fromPalindrome @2 [0,1,0]))
+-- Just 1
+-- >>> symbolAt' 2 ((fromPalindrome @2 [0,1,0]))
+-- Nothing
+-- >>> symbolAt' 3 (fromPalindrome @2 [0,1,0])
+-- Nothing
+-- >>> symbolAt' (-1) (fromPalindrome @2 [0,1,0])
+-- Nothing
 symbolAt' :: Int -> Node n -> Maybe (Symbol n)
 symbolAt' i _ | i < 0 = Nothing
 symbolAt' 0 t = symbol t
@@ -146,6 +165,11 @@ getAncestors = Vector.fromList . go 0 . Just
 
 -- | Construct a new node by following an edge.
 -- This corresponds to adding a symbol to both ends of a palindrome.
+--
+-- >>> mkEdge 0 (fromPalindrome @2 [])
+-- fromPalindrome [0,0]
+-- >>> mkEdge 1 (fromPalindrome @2 [0])
+-- fromPalindrome [1,0,1]
 mkEdge :: KnownNat n => Symbol n -> Node n -> Node n
 mkEdge c parentNode = t
   where
