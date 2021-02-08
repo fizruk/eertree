@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
 
 import           Test.Hspec
@@ -6,8 +7,9 @@ import           Test.Hspec.Contrib.HUnit    (fromHUnitTest)
 import           Test.HUnit
 
 import           Data.List                   (intercalate)
+import           Data.Proxy
 import qualified Data.Set                    as S
-import           GHC.TypeLits                (KnownNat)
+import           GHC.TypeLits                (KnownNat, natVal)
 
 import EERTREE.Simple
 
@@ -61,17 +63,17 @@ testStrings :: [String]
 testStrings = generateStrings 3 5
 
 -- | Generate eertrees from all strings of alphabet size @n@ and of length @m@
--- generateEERTREEs :: Int -> Int -> [EERTREE]
--- generateEERTREEs n m = map (eertreeFromString @n) (generateStrings n m)
+generateEERTREEs :: forall n. KnownNat n => Int -> [EERTREE n]
+generateEERTREEs m = map (eertreeFromString @n) (generateStrings (fromInteger (natVal (Proxy @n))) m)
 
 -- | Generate all strings of alphabet size @n@ and of length @m@
 --
 -- >>> generateStrings 2 3
--- ["","0","1","00","10","01","11"]
+-- ["","0","1","00","10","01","11","000","100","010","110","001","101","011","111"]
 generateStrings :: Int -> Int -> [String]
 generateStrings 0 _ = []
 generateStrings _ 0 = []
-generateStrings n m = take (n^m - 1) buildStrings
+generateStrings n m = take ((n^(m + 1) - 1) `div` (n - 1)) buildStrings -- Sum of a geometric series
   where
     buildStrings = [] : [ x : xs | xs <- buildStrings, x <- intercalate "" alpha ]
     alpha = map show [0 .. n-1]
