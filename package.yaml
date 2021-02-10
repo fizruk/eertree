@@ -56,6 +56,9 @@ tests:
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
+    - hspec
+    - hspec-contrib
+    - HUnit
     - eertree
 
   doctests:
