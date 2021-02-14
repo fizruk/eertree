@@ -103,7 +103,7 @@ prepend c t =
       { strLen = strLen t + 1
       , maxPrefix = newMaxPrefix
       , maxSuffix = if null cs then newMaxPrefix else maxSuffix t
-      , strReversedPrefix = if null cs then cs else strReversedPrefix t Seq.|> c
+      , strReversedPrefix = if null cs then Seq.empty else strReversedPrefix t Seq.|> c
       , strSuffix = cs
       , palindromes = newMaxPrefix : palindromes t
       } where
