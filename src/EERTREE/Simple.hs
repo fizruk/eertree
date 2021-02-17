@@ -129,7 +129,7 @@ prepend c t =
 append :: KnownNat n => Symbol n -> EERTREE n -> EERTREE n
 append c t = reverseEERTREE (prepend c (reverseEERTREE t))
 
--- | Merge two eertrees in O(1) amortized
+-- | Merge two eertrees in O(1) on average
 --
 -- >>> fromEERTREE (merge @2 "0110100" "11001001")
 -- [0,1,1,0,1,0,0,1,1,0,0,1,0,0,1]
@@ -160,7 +160,7 @@ merge t1 t2
                                    , maxPrefix         = maxPrefix t1
                                    , strReversedPrefix = strReversedPrefix t2' <> Seq.fromList s1'
                                    , strSuffix         = strSuffix t1 <> Seq.fromList (fromEERTREE t2)
-                                   , palindromes       = pals1 <> pals2 <> pals
+                                   , palindromes       = pals <> pals1 <> pals2
                                    }
         where
           -- | Symbol to prepend
@@ -184,7 +184,7 @@ merge t1 t2
                                    , maxSuffix         = maxSuffix t2
                                    , strReversedPrefix = strReversedPrefix t2 <> Seq.fromList (reverseFromEERTREE t1)
                                    , strSuffix         = strSuffix t1' <> Seq.fromList s2'
-                                   , palindromes       = pals1 <> pals2 <> pals
+                                   , palindromes       = pals <> pals1 <> pals2
                                    }
         where
           -- | Symbol to append
