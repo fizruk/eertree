@@ -5,7 +5,9 @@ module EERTREE.Simple where
 
 import           Data.Char                   (digitToInt)
 import qualified Data.Foldable               as F
-import           Data.List                   (nub)
+import           Data.List                   (nub, maximumBy)
+import qualified Data.Map                    as Map
+import           Data.Ord                    (comparing)
 import           Data.Sequence               (Seq)
 import qualified Data.Sequence               as Seq
 import           Data.String                 (IsString (..))
@@ -243,6 +245,39 @@ a216264 n = 1 : map (*2) halves
     -- That is why we can do half work (or 1/(alphabet size) in general)
     -- and count rich strings faster.
     halves = dfsCountLevels (n - 1) (singleton 0) (richSubEERTREEs @2)
+
+-- | Palindromic refrain:
+-- for a given string S find a palindrome P maximizing the value
+-- |P| * occ(S, P), where occ(S, P) is the number of occurences of P in S
+-- 
+-- >>> palindromicRefrain (eertreeFromString @3 "0102010")
+-- (fromPalindrome [0,1,0,2,0,1,0],7)
+--
+-- >>> palindromicRefrain (eertreeFromString @1 "000")
+-- (fromPalindrome [0,0],4)
+palindromicRefrain :: KnownNat n => EERTREE n -> (Node n, Int)
+palindromicRefrain t = maximumBy (comparing snd) (zip unique refrain)
+  where
+    -- | Count palindrome frequency
+    count = Map.fromListWith (+) [ (x, 1) | x <- palindromes t ]
+
+    -- | Unique palindromes
+    unique = Map.keys count
+
+    -- | List of links
+    linkList = filter (\x -> len x > 0) (map link unique)
+
+    -- | Count link occurences
+    occ = loop count linkList
+    -- | Loop over all links
+    loop occs linkM
+      | null linkM = occs
+      | otherwise  = loop (Map.adjust (Map.findWithDefault 0 x occs +) x occs) (tail linkM)
+        where
+          x = head linkM
+
+    -- | Calculate refrains
+    refrain = map (\(p, x) -> x * len p) (Map.toList occ)
 
 -- * Helpers
 

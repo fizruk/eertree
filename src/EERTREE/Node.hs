@@ -80,6 +80,18 @@ edge c node = fromWeakly (edges node IntMap.! coerce c)
 directLink :: KnownNat n => Symbol n -> Node n -> Node n
 directLink c node = fromMaybe oddNode (IntMap.lookup (coerce c) (links node))
 
+-- | The largest palindrome suffix
+--
+-- >>> link (fromPalindrome @2 [1,0,0,0,1])
+-- fromPalindrome [1]
+--
+-- >>> link (fromPalindrome @2 [0,0,0])
+-- fromPalindrome [0,0]
+link :: KnownNat n => Node n -> Node n
+link node = List.maximumBy (comparing len) allLinks
+  where
+    allLinks = map (`directLink` node) alphabet
+
 -- | Construct a @'Node' n@ from a palindrome.
 --
 -- NOTE: this will result in an error if input is not a palindrome.

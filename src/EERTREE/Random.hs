@@ -5,7 +5,7 @@ module EERTREE.Random where
 import           Control.Monad   (replicateM)
 import           Data.Proxy
 import           EERTREE.Simple
-import           EERTREE.Symbol  (Symbol, alphabet)
+import           EERTREE.Symbol  (alphabet)
 import           GHC.TypeLits    (KnownNat)
 import           Test.QuickCheck
 
