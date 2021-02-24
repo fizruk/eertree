@@ -90,9 +90,7 @@ directLink c node = fromMaybe oddNode (IntMap.lookup (coerce c) (links node))
 -- >>> link (fromPalindrome @2 [0,0,0])
 -- fromPalindrome [0,0]
 link :: KnownNat n => Node n -> Node n
-link node = List.maximumBy (comparing len) allLinks
-  where
-    allLinks = map (`directLink` node) alphabet
+link = List.maximumBy (comparing len) . links
 
 -- | Construct a @'Node' n@ from a palindrome.
 --
@@ -126,7 +124,7 @@ symbolAt i t = symbolAt' (min i (len t - i - 1)) t
 
 -- | Find a symbol at a given position in a palindrome.
 -- Note that it does not matter from what end you start indexing.
--- 
+--
 -- >>> symbolAt' 0 (fromPalindrome @2 [0,1,0])
 -- Just 0
 -- >>> symbolAt' 1 ((fromPalindrome @2 [0,1,0]))
