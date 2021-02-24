@@ -31,7 +31,7 @@ data Node (n :: Nat) = Node
   , len       :: !Int
   , parent    :: Maybe (Symbol n, Node n)
   , ancestors :: Vector (Node n)
-  , edges     :: IntMap (Weakly (Node n))
+  , edges     :: Vector (Weakly (Node n))
   , links     :: IntMap (Node n)
   }
 
@@ -68,7 +68,7 @@ symbol = fmap fst . parent
 -- >>> edge 0 (fromPalindrome @2 [])
 -- fromPalindrome [0,0]
 edge :: Symbol n -> Node n -> Node n
-edge c node = fromWeakly (edges node IntMap.! coerce c)
+edge c node = fromWeakly (edges node Vector.! coerce c)
 
 -- | Follow a direct link to find the largest palindrome
 -- suffix preceded by a given symbol in another palindrome.
@@ -190,7 +190,7 @@ mkEdge c parentNode = t
       , len       = len parentNode + 2
       , parent    = Just (c, parentNode)
       , ancestors = getAncestors parentNode
-      , edges     = IntMap.fromList [ (coerce c', applyWeakly (mkEdge c') t) | c' <- alphabet ]
+      , edges     = Vector.fromListN alpha [ applyWeakly (mkEdge c') t | c' <- alphabet ]
       , links     = mkDirectLinks c parentNode
       }
 
@@ -236,7 +236,7 @@ mkDirectLinks c parentNode =
       | otherwise -> links newMaxSuf
   where
     newMaxSuf = newSuffixOf c parentNode
-    t = fromWeakly (edges parentNode IntMap.! coerce c)
+    t = edge c parentNode
 
 -- | An even node corresponding to an empty palindrome.
 --
@@ -250,9 +250,11 @@ evenNode = Node
   , len   = 0
   , parent = Nothing
   , ancestors = Vector.empty
-  , edges = IntMap.fromList [ (coerce c, applyWeakly (mkEdge c) evenNode) | c <- alphabet ]
+  , edges = Vector.fromListN n [ applyWeakly (mkEdge c) evenNode | c <- alphabet ]
   , links = IntMap.fromList [ (coerce c, oddNode) | c <- alphabet @n ]
   }
+  where
+    n = fromInteger (natVal (Proxy @n))
 
 -- | An odd node, corresponding to a parent of singleton palindromes.
 --
@@ -269,6 +271,8 @@ oddNode = Node
   , len   = -1
   , parent = Nothing
   , ancestors = Vector.empty
-  , edges = IntMap.fromList [ (coerce c, applyWeakly (mkEdge c) oddNode) | c <- alphabet ]
+  , edges = Vector.fromListN n [ applyWeakly (mkEdge c) oddNode | c <- alphabet ]
   , links = IntMap.fromList [ (coerce c, oddNode) | c <- alphabet @n ]
   }
+  where
+    n = fromInteger (natVal (Proxy @n))
