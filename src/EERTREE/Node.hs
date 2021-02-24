@@ -13,9 +13,10 @@ import qualified Data.IntMap                  as IntMap
 import qualified Data.List                    as List
 import           Data.Maybe                   (fromMaybe)
 import           Data.Ord                     (comparing)
+import           Data.Proxy
 import           Data.Vector                  (Vector)
 import qualified Data.Vector                  as Vector
-import           GHC.TypeLits                 (KnownNat, Nat)
+import           GHC.TypeLits                 (KnownNat, Nat, natVal)
 
 import           EERTREE.Node.Internal.Weakly
 import           EERTREE.Symbol
@@ -26,22 +27,23 @@ import           EERTREE.Symbol
 -- | A node corresponsing to a palindrome
 -- in an alphabet of size @n@.
 data Node (n :: Nat) = Node
-  { len       :: !Int
+  { index     :: !Int
+  , len       :: !Int
   , parent    :: Maybe (Symbol n, Node n)
   , ancestors :: Vector (Node n)
   , edges     :: IntMap (Weakly (Node n))
   , links     :: IntMap (Node n)
   }
 
--- | Nodes are compared by length first and by half
--- of the palindrome they represent next.
+-- | Nodes are compared by length first and by index next.
 instance Eq (Node n) where
-  t1 == t2 = t1 `compare` t2 == EQ
+  t1 == t2 = index t1 == index t2
 
--- | Nodes are compared by length first and by half
--- of the palindrome they represent next.
+-- | Nodes are compared by length first and by index next.
 instance Ord (Node n) where
-  compare = comparing len <> comparing pathTo
+  t1 `compare` t2
+    | even (len t1) = comparing len t1 t2 <> comparing index t1 t2
+    | otherwise     = comparing len t1 t2 <> comparing (negate . index) t1 t2
 
 instance Show (Node n) where
   show node
@@ -182,16 +184,26 @@ getAncestors = Vector.fromList . go 0 . Just
 -- fromPalindrome [0,0]
 -- >>> mkEdge 1 (fromPalindrome @2 [0])
 -- fromPalindrome [1,0,1]
-mkEdge :: KnownNat n => Symbol n -> Node n -> Node n
+mkEdge :: forall n. KnownNat n => Symbol n -> Node n -> Node n
 mkEdge c parentNode = t
   where
     t = Node
-      { len    = len parentNode + 2
-      , parent = Just (c, parentNode)
+      { index     = newIndex
+      , len       = len parentNode + 2
+      , parent    = Just (c, parentNode)
       , ancestors = getAncestors parentNode
-      , edges  = IntMap.fromList [ (coerce c', applyWeakly (mkEdge c') t) | c' <- alphabet ]
-      , links  = mkDirectLinks c parentNode
+      , edges     = IntMap.fromList [ (coerce c', applyWeakly (mkEdge c') t) | c' <- alphabet ]
+      , links     = mkDirectLinks c parentNode
       }
+
+    parentIndex = index parentNode
+    parentLen   = len parentNode
+    halfParentLen = (parentLen + 1) `div` 2
+    alpha = fromInteger (natVal (Proxy @n))
+
+    newIndex
+      | even parentLen = parentIndex + alpha ^ halfParentLen * (fromSymbol c + 1)
+      | otherwise      = parentIndex - alpha ^ halfParentLen * (fromSymbol c + 1)
 
 -- | Find what would be the largest suffix of a new palindrome
 -- after added a given symbol to the end of another palindrome.
@@ -236,7 +248,8 @@ mkDirectLinks c parentNode =
 -- fromPalindrome [1,1]
 evenNode :: forall n. KnownNat n => Node n
 evenNode = Node
-  { len   = 0
+  { index = 0
+  , len   = 0
   , parent = Nothing
   , ancestors = Vector.empty
   , edges = IntMap.fromList [ (coerce c, applyWeakly (mkEdge c) evenNode) | c <- alphabet ]
@@ -254,7 +267,8 @@ evenNode = Node
 -- oddNode
 oddNode :: forall n. KnownNat n => Node n
 oddNode = Node
-  { len   = -1
+  { index = -1
+  , len   = -1
   , parent = Nothing
   , ancestors = Vector.empty
   , edges = IntMap.fromList [ (coerce c, applyWeakly (mkEdge c) oddNode) | c <- alphabet ]

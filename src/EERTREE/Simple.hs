@@ -6,6 +6,9 @@ module EERTREE.Simple where
 import           Data.Char                   (digitToInt)
 import qualified Data.Foldable               as F
 import           Data.List                   (nub, maximumBy)
+import           Data.IntMap                 (IntMap)
+import qualified Data.IntMap                 as IntMap
+import           Data.Map                    (Map)
 import qualified Data.Map                    as Map
 import           Data.Ord                    (comparing)
 import           Data.Sequence               (Seq)
@@ -259,25 +262,35 @@ palindromicRefrain :: KnownNat n => EERTREE n -> (Node n, Int)
 palindromicRefrain t = maximumBy (comparing snd) (zip unique refrain)
   where
     -- | Count palindrome frequency
-    count = Map.fromListWith (+) [ (x, 1) | x <- palindromes t ]
+    occ = frequency_ t
 
     -- | Unique palindromes
-    unique = Map.keys count
-
-    -- | List of links
-    linkList = filter (\x -> len x > 0) (map link unique)
-
-    -- | Count link occurences
-    occ = loop count linkList
-    -- | Loop over all links
-    loop occs linkM
-      | null linkM = occs
-      | otherwise  = loop (Map.adjust (Map.findWithDefault 0 x occs +) x occs) (tail linkM)
-        where
-          x = head linkM
+    unique = map fst (IntMap.elems occ)
 
     -- | Calculate refrains
-    refrain = map (\(p, x) -> x * len p) (Map.toList occ)
+    refrain = map (\(p, f) -> f * len p) (IntMap.elems occ)
+
+-- | Compute the number of occurences for each subpalindrome
+--
+-- >>> frequency (eertreeFromString @2 "10101")
+-- [(fromPalindrome [1,0,1,0,1],1),(fromPalindrome [1,0,1],2),(fromPalindrome [0,1,0],1),(fromPalindrome [1],3),(fromPalindrome [0],2)]
+frequency :: KnownNat n => EERTREE n -> [(Node n, Int)]
+frequency = IntMap.elems . frequency_
+
+-- | Compute the number of occurences for each subpalindrome.
+-- Return @IntMap@ of frequences with Node index as a key.
+--
+-- >>> frequency_ (eertreeFromString @2 "1000")
+-- fromList [(-4,(fromPalindrome [0,0,0],1)),(-3,(fromPalindrome [1],1)),(-2,(fromPalindrome [0],3)),(1,(fromPalindrome [0,0],2))]
+frequency_ :: KnownNat n => EERTREE n -> IntMap (Node n, Int)
+frequency_ t = IntMap.fromListWith combine pals
+  where
+    unfoldLinks = takeWhile (\n -> len n > 0) . iterate link
+
+    -- Zip palindromes with their indexes
+    pals = map ((\(p, f) -> (index p, (p, f))) . (\n -> (n, 1))) (concatMap unfoldLinks (palindromes t))
+
+    combine pair1 pair2 = (fst pair1, snd pair1 + snd pair2)
 
 -- * Helpers
 
