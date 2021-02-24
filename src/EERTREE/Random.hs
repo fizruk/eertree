@@ -9,6 +9,9 @@ import           EERTREE.Symbol  (alphabet)
 import           GHC.TypeLits    (KnownNat)
 import           Test.QuickCheck
 
+-- $setup
+-- >>> :set -XTypeApplications -XDataKinds -XOverloadedStrings
+
 genEERTREE :: KnownNat n => Int -> Gen (EERTREE n)
 genEERTREE len = eertree <$> replicateM len (elements alphabet)
 
@@ -22,12 +25,14 @@ genMerge _ len = do
   return new
 
 -- |
--- >>> generate (genAverageMerge (Proxy @2) 100 500)
+-- @
+-- > generate (genAverageMerge (Proxy @2) 100 500)
 -- 7.416
--- >>> generate (genAverageMerge (Proxy @4) 100 500)
+-- > generate (genAverageMerge (Proxy @4) 100 500)
 -- 3.09
--- >>> generate (genAverageMerge (Proxy @33) 100 500)
+-- > generate (genAverageMerge (Proxy @33) 100 500)
 -- 2.024
+-- @
 genAverageMerge :: forall n. KnownNat n => Proxy n -> Int -> Int -> Gen Double
 genAverageMerge n len sampleSize = do
   xs <- replicateM sampleSize (genMerge n len)
