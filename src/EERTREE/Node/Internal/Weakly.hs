@@ -45,7 +45,7 @@ applyWeakly :: (a -> b) -> a -> Weakly b
 {-# NOINLINE applyWeakly #-}
 applyWeakly f x = unsafePerformIO $ do
   let y = f x
-  w <- mkWeak y y Nothing
+  w <- mkWeakPtr y Nothing
   Weakly f x <$> newIORef w
 
 -- | Extract weakly referenced result,
@@ -59,7 +59,7 @@ fromWeakly (Weakly f x wref) = unsafePerformIO $ do
     Just v  -> return v
     Nothing -> do
       let y = f x
-      w' <- mkWeak y y Nothing
+      w' <- mkWeakPtr y Nothing
       writeIORef wref w'
       return y
 

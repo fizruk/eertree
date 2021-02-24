@@ -1,0 +1,5 @@
+:set prompt ">>> "
+:set prompt2 "... "
+:set -XTypeApplications
+:set -XDataKinds
+:set -XOverloadedStrings
