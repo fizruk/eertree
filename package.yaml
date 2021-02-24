@@ -30,6 +30,7 @@ dependencies:
 - containers
 - vector
 - QuickCheck
+- integer-logarithms
 
 executables:
   a216264:
