@@ -6,8 +6,10 @@
 {-# LANGUAGE TypeApplications           #-}
 module EERTREE.Node where
 
-import           Data.Bits                    (clearBit, countTrailingZeros)
+import           Data.Bits                    (clearBit, countTrailingZeros,
+                                               shiftL)
 import           Data.Coerce                  (coerce)
+import           Data.Function                (on)
 import           Data.IntMap                  (IntMap)
 import qualified Data.IntMap                  as IntMap
 import qualified Data.List                    as List
@@ -17,6 +19,7 @@ import           Data.Proxy
 import           Data.Vector                  (Vector)
 import qualified Data.Vector                  as Vector
 import           GHC.TypeLits                 (KnownNat, Nat, natVal)
+import           Math.NumberTheory.Logarithms (integerLog2')
 
 import           EERTREE.Node.Internal.Weakly
 import           EERTREE.Symbol
@@ -27,7 +30,7 @@ import           EERTREE.Symbol
 -- | A node corresponsing to a palindrome
 -- in an alphabet of size @n@.
 data Node (n :: Nat) = Node
-  { index     :: !Int
+  { index     :: !Integer
   , len       :: !Int
   , parent    :: Maybe (Symbol n, Node n)
   , ancestors :: Vector (Node n)
@@ -35,15 +38,13 @@ data Node (n :: Nat) = Node
   , links     :: IntMap (Node n)
   }
 
--- | Nodes are compared by length first and by index next.
+-- | Nodes are compared by index.
 instance Eq (Node n) where
-  t1 == t2 = index t1 == index t2
+  (==) = (==) `on` index
 
--- | Nodes are compared by length first and by index next.
+-- | Nodes are compared by index.
 instance Ord (Node n) where
-  t1 `compare` t2
-    | even (len t1) = comparing len t1 t2 <> comparing index t1 t2
-    | otherwise     = comparing len t1 t2 <> comparing (negate . index) t1 t2
+  compare = comparing index
 
 instance Show (Node n) where
   show node
@@ -190,18 +191,15 @@ mkEdge c parentNode = t
       , len       = len parentNode + 2
       , parent    = Just (c, parentNode)
       , ancestors = getAncestors parentNode
-      , edges     = Vector.fromListN alpha [ applyWeakly (mkEdge c') t | c' <- alphabet ]
+      , edges     = Vector.fromListN (fromInteger n)
+          [ applyWeakly (mkEdge c') t | c' <- alphabet ]
       , links     = mkDirectLinks c parentNode
       }
 
-    parentIndex = index parentNode
-    parentLen   = len parentNode
-    halfParentLen = (parentLen + 1) `div` 2
-    alpha = fromInteger (natVal (Proxy @n))
-
-    newIndex
-      | even parentLen = parentIndex + alpha ^ halfParentLen * (fromSymbol c + 1)
-      | otherwise      = parentIndex - alpha ^ halfParentLen * (fromSymbol c + 1)
+    newIndex = i `shiftL` k + signum i * fromIntegral (fromSymbol c)
+    i = index parentNode
+    k = 1 + integerLog2' (n - 1)
+    n = natVal (Proxy @n)
 
 -- | Find what would be the largest suffix of a new palindrome
 -- after added a given symbol to the end of another palindrome.
@@ -246,7 +244,7 @@ mkDirectLinks c parentNode =
 -- fromPalindrome [1,1]
 evenNode :: forall n. KnownNat n => Node n
 evenNode = Node
-  { index = 0
+  { index = 1
   , len   = 0
   , parent = Nothing
   , ancestors = Vector.empty
