@@ -260,7 +260,7 @@ palindromicRefrain :: KnownNat n => EERTREE n -> (Node n, Int)
 palindromicRefrain t = maximumBy (comparing snd) (zip unique refrain)
   where
     -- | Count palindrome frequency
-    occ = frequency_ t
+    occ = frequency' t
 
     -- | Unique palindromes
     unique = map fst (Map.elems occ)
@@ -271,17 +271,17 @@ palindromicRefrain t = maximumBy (comparing snd) (zip unique refrain)
 -- | Compute the number of occurences for each subpalindrome
 --
 -- >>> frequency (eertreeFromString @2 "10101")
--- [(fromPalindrome [1,0,1,0,1],1),(fromPalindrome [1,0,1],2),(fromPalindrome [0,1,0],1),(fromPalindrome [1],3),(fromPalindrome [0],2)]
+-- [(fromPalindrome [1,0,1,0,1],1),(fromPalindrome [0,1,0],1),(fromPalindrome [1,0,1],2),(fromPalindrome [1],3),(fromPalindrome [0],2)]
 frequency :: KnownNat n => EERTREE n -> [(Node n, Int)]
-frequency = Map.elems . frequency_
+frequency = Map.elems . frequency'
 
 -- | Compute the number of occurences for each subpalindrome.
 -- Return @Map@ of frequences with Node index as a key.
 --
--- >>> frequency_ (eertreeFromString @2 "1000")
--- fromList [(-4,(fromPalindrome [0,0,0],1)),(-3,(fromPalindrome [1],1)),(-2,(fromPalindrome [0],3)),(1,(fromPalindrome [0,0],2))]
-frequency_ :: KnownNat n => EERTREE n -> Map Integer (Node n, Int)
-frequency_ t = Map.fromListWith combine pals
+-- >>> frequency' (eertreeFromString @2 "1000")
+-- fromList [(-4,(fromPalindrome [0,0,0],1)),(-3,(fromPalindrome [1],1)),(-2,(fromPalindrome [0],3)),(2,(fromPalindrome [0,0],2))]
+frequency' :: KnownNat n => EERTREE n -> Map Integer (Node n, Int)
+frequency' t = Map.fromListWith combine pals
   where
     unfoldLinks = takeWhile (\n -> len n > 0) . iterate link
 
