@@ -1,4 +1,4 @@
-name: Pubish Haddock Documentation
+name: Haddock documentation
 
 on:
   push:
