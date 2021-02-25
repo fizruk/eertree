@@ -3,26 +3,44 @@
 module EERTREE.Random where
 
 import           Control.Monad   (replicateM)
-import           Data.Proxy
-import           EERTREE.Simple
-import           EERTREE.Symbol  (alphabet)
+import           Data.Proxy      (Proxy)
 import           GHC.TypeLits    (KnownNat)
+
+import           EERTREE.Simple
+import           EERTREE.Symbol
+
 import           Test.QuickCheck
 
 -- $setup
 -- >>> :set -XTypeApplications -XDataKinds -XOverloadedStrings
 
-genEERTREE :: KnownNat n => Int -> Gen (EERTREE n)
-genEERTREE len = eertree <$> replicateM len (elements alphabet)
+-- | Generate list of random symbols of length @len@
+--
+-- > genRandomSymbols @4 10
+-- [3,2,3,1,2,3,0,0,2,0]
+genRandomSymbols :: KnownNat n => Int -> IO [Symbol n]
+genRandomSymbols n = generate (randomSymbols n)
 
-genMerge :: forall n. KnownNat n => Proxy n -> Int -> Gen Int
-genMerge _ len = do
-  e1 <- genEERTREE @n len
-  e2 <- genEERTREE @n len
-  let e = merge e1 e2
-      lp = length . palindromes
-      new = lp e - (lp e1 + lp e2)
-  return new
+-- | Generator for list of random symbols of length @len@
+randomSymbols :: KnownNat n => Int -> Gen [Symbol n]
+randomSymbols len = replicateM len (elements alphabet)
+
+-- | Generator for eertree from random list of symbols of length @len@
+randomEERTREE :: KnownNat n => Int -> Gen (EERTREE n)
+randomEERTREE len = do
+  symbols <- randomSymbols len
+  let t = eertree symbols
+  return t
+
+-- | Count number of new palindromes after merging two random eertrees
+randomMerge :: forall n. KnownNat n => Proxy n -> Int -> Gen Int
+randomMerge _ len = do
+  t1 <- randomEERTREE @n len
+  t2 <- randomEERTREE @n len
+  let t = merge t1 t2
+      palLen = length . palindromes
+      newPals = palLen t - (palLen t1 + palLen t2)
+  return newPals
 
 -- |
 -- @
@@ -35,5 +53,5 @@ genMerge _ len = do
 -- @
 genAverageMerge :: forall n. KnownNat n => Proxy n -> Int -> Int -> Gen Double
 genAverageMerge n len sampleSize = do
-  xs <- replicateM sampleSize (genMerge n len)
+  xs <- replicateM sampleSize (randomMerge n len)
   return (fromIntegral (sum xs) / fromIntegral sampleSize)

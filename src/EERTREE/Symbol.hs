@@ -7,14 +7,15 @@
 module EERTREE.Symbol where
 
 import           Data.Proxy
-import           GHC.TypeLits (KnownNat, Nat, natVal)
+import           GHC.TypeLits    (KnownNat, Nat, natVal)
+import           Control.DeepSeq
 
 -- $setup
 -- >>> :set -XTypeApplications -XDataKinds
 
 -- | A symbol in an alphabet of size @n@.
 newtype Symbol (n :: Nat) = Symbol { fromSymbol :: Int }
-  deriving newtype (Eq, Ord, Show, Enum)
+  deriving newtype (Eq, Ord, Show, Enum, NFData)
 
 instance KnownNat n => Bounded (Symbol n) where
   minBound = Symbol 0

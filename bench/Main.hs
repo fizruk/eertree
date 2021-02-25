@@ -4,61 +4,36 @@
 {-# LANGUAGE TypeApplications    #-}
 module Main where
 
-import           Criterion.Main
+import           Data.Proxy      (Proxy (..))
+import           GHC.TypeLits    (KnownNat, natVal)
 
+import           EERTREE.Random
 import           EERTREE.Simple
 import           EERTREE.Symbol
 
--- | String of ones
-benchMaxSuffixOne :: Int -> String
-benchMaxSuffixOne n = show (maxSuffix (eertree @2 (replicate n 1)))
+import           Criterion.Main
+import           Test.QuickCheck
 
--- | Eertree from string of ones
-benchMaxSuffixOneFromString :: Int -> String
-benchMaxSuffixOneFromString n = show (maxSuffix (eertreeFromString @2 (take n (cycle "1"))))
+-- | Build eertree from a given list of symbols
+-- and show its @maxSuffix@
+benchRandomEERTREE :: KnownNat n => [Symbol n] -> String
+benchRandomEERTREE s = show (maxSuffix (eertree s))
 
--- | Alphabet
-benchMaxSuffixAlpha :: Int -> String
-benchMaxSuffixAlpha n = show (maxSuffix (eertree @5000 [0 .. Symbol (n - 1)]))
-
--- | 20% of prepends go through case one
-benchMaxSuffix20 :: Int -> String
-benchMaxSuffix20 n = show (maxSuffix (eertree @2 (take n (cycle [1,0,1,0,0]))))
-
--- | 50% of prepends go through case one
-benchMaxSuffix50 :: Int -> String
-benchMaxSuffix50 n = show (maxSuffix (eertree @2 (take n (cycle [1,0]))))
-
+-- | For a given alphabet size and a list of eertree lengths
+-- construct a list of corresponding benchmarks
+benchmarkList :: forall n. KnownNat n => Proxy n -> [Int] -> [Benchmark]
+benchmarkList _ lens = [ env (genRandomSymbols @n len)
+                         (\s ->
+                           bgroup ("eertree @" ++ show (natVal (Proxy @n)))
+                           [ bench ("len " ++ show len) $ nf benchRandomEERTREE s ]
+                         )
+                       | len <- lens ]
 
 main :: IO ()
 main = defaultMain
-  [ bgroup "maxSuffix . eertree (1)"
-    [ bench  "500" $ nf benchMaxSuffixOne  500
-    , bench "1000" $ nf benchMaxSuffixOne 1000
-    , bench "2000" $ nf benchMaxSuffixOne 2000
-    , bench "4000" $ nf benchMaxSuffixOne 4000 ]
-  
-  , bgroup "maxSuffix . eertreeFromString '1'"
-    [ bench  "500" $ nf benchMaxSuffixOneFromString  500
-    , bench "1000" $ nf benchMaxSuffixOneFromString 1000
-    , bench "2000" $ nf benchMaxSuffixOneFromString 2000
-    , bench "4000" $ nf benchMaxSuffixOneFromString 4000 ]
-  
-  , bgroup "maxSuffix . eertree (Alpha)"
-    [ bench  "500" $ nf benchMaxSuffixAlpha  500
-    , bench "1000" $ nf benchMaxSuffixAlpha 1000
-    , bench "2000" $ nf benchMaxSuffixAlpha 2000
-    , bench "4000" $ nf benchMaxSuffixAlpha 4000 ]
-  
-  , bgroup "maxSuffix . eertree (20%)"
-    [ bench  "500" $ nf benchMaxSuffix50  500
-    , bench "1000" $ nf benchMaxSuffix50 1000
-    , bench "2000" $ nf benchMaxSuffix50 2000
-    , bench "4000" $ nf benchMaxSuffix50 4000 ]
-
-  , bgroup "maxSuffix . eertree (50%)"
-  [ bench  "500" $ nf benchMaxSuffix50  500
-  , bench "1000" $ nf benchMaxSuffix50 1000
-  , bench "2000" $ nf benchMaxSuffix50 2000
-  , bench "4000" $ nf benchMaxSuffix50 4000 ]
-  ]
+  (listAt2 ++ listAt4)
+    where
+      -- | Lists of benchmarks for eertrees of lenths 1k, 2k, 4k, 8k, and 16k
+      -- and for alphabet sizes 2 and 4 respectively
+      listAt2 = benchmarkList (Proxy @2) (take 5 [ 1000 * 2^x | x <- [0..] ])
+      listAt4 = benchmarkList (Proxy @4) (take 5 [ 1000 * 2^x | x <- [0..] ])
