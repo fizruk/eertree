@@ -2,6 +2,8 @@
 
 Efficient purely functional palindromic tree.
 
+[![Haddock](https://github.com/fizruk/eertree/actions/workflows/haddock.yml/badge.svg)](https://fizruk.github.io/eertree/)
+
 _Inspired by «EERTREE: An Efficient Data Structure for Processing Palindromes in Strings» by Mikhail Rubinchik and Arseny M. Shur. See <https://arxiv.org/pdf/1506.04862v2.pdf> for more details._
 
 ## Counting rich binary strings
