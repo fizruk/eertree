@@ -26,12 +26,14 @@ import           EERTREE.Symbol
 
 -- | A palindromic tree for some string with auxillary information.
 data EERTREE n = EERTREE
-  { strLen            :: !Int           -- ^ Length of the analysed string.
-  , maxPrefix         :: Node n         -- ^ Maximum palindromic prefix.
-  , maxSuffix         :: Node n         -- ^ Maximum palindromic suffix
-  , strReversedPrefix :: Seq (Symbol n) -- ^ Prefix, preceding maximum palindromic suffix
-  , strSuffix         :: Seq (Symbol n) -- ^ Suffix, following maximum palindromic prefix.
-  , palindromes       :: [Node n]       -- ^ Accumulated list of encountered palindromes.
+  { strLen             :: !Int           -- ^ Length of the analysed string.
+  , maxPrefix          :: Node n         -- ^ Maximum palindromic prefix.
+  , maxSuffix          :: Node n         -- ^ Maximum palindromic suffix
+  , strReversedPrefix  :: Seq (Symbol n) -- ^ Prefix, preceding maximum palindromic suffix
+  , strSuffix          :: Seq (Symbol n) -- ^ Suffix, following maximum palindromic prefix.
+  , palindromes        :: [Node n]       -- ^ Accumulated list of encountered palindromes.
+  , fromEERTREE        :: Seq (Symbol n) -- ^ Get the string back from eertree
+  , reverseFromEERTREE :: Seq (Symbol n) -- ^ Get the reversed string from eertree
   } deriving (Eq, Show)
 
 instance KnownNat n => IsString (EERTREE n) where
@@ -40,12 +42,14 @@ instance KnownNat n => IsString (EERTREE n) where
 -- | An empty eertree.
 empty :: forall n. KnownNat n => EERTREE n
 empty = EERTREE
-  { strLen              = 0
-  , maxPrefix           = evenNode @n
-  , maxSuffix           = evenNode @n
-  , strReversedPrefix   = Seq.empty
-  , strSuffix           = Seq.empty
-  , palindromes         = []
+  { strLen             = 0
+  , maxPrefix          = evenNode @n
+  , maxSuffix          = evenNode @n
+  , strReversedPrefix  = Seq.empty
+  , strSuffix          = Seq.empty
+  , palindromes        = []
+  , fromEERTREE        = Seq.empty
+  , reverseFromEERTREE = Seq.empty
   }
 
 -- | An eertree for a singleton string.
@@ -74,25 +78,13 @@ eertreeFromString = foldr (prepend . Symbol . digitToInt) empty
 -- >> reverseEERTREE @2 "01001" == [1,0,0,1,0]
 -- True
 reverseEERTREE :: KnownNat n => EERTREE n -> EERTREE n
-reverseEERTREE t = t { maxPrefix         = maxSuffix t
-                     , maxSuffix         = maxPrefix t
-                     , strReversedPrefix = strSuffix t
-                     , strSuffix         = strReversedPrefix t
+reverseEERTREE t = t { maxPrefix          = maxSuffix t
+                     , maxSuffix          = maxPrefix t
+                     , strReversedPrefix  = strSuffix t
+                     , strSuffix          = strReversedPrefix t
+                     , fromEERTREE        = reverseFromEERTREE t
+                     , reverseFromEERTREE = fromEERTREE t
                      }
-
--- | Get the string back from an eertree.
---
--- >>> fromEERTREE @2 "01001"
--- [0,1,0,0,1]
-fromEERTREE :: EERTREE n -> [Symbol n]
-fromEERTREE t = value (maxPrefix t) <> F.toList (strSuffix t)
-
--- | Get the reversed string from an eertree
---
--- >>> reverseFromEERTREE @2 "01001"
--- [1,0,0,1,0]
-reverseFromEERTREE :: EERTREE n -> [Symbol n]
-reverseFromEERTREE t = value (maxSuffix t) <> F.toList (strReversedPrefix t)
 
 -- | Add a symbol to the beginning of a string
 -- corresponding to an eertree.
@@ -103,25 +95,29 @@ prepend :: KnownNat n => Symbol n -> EERTREE n -> EERTREE n
 prepend c t =
   case Seq.viewl (strSuffix t) of
     c' Seq.:< cs | c == c' -> EERTREE
-      { strLen = strLen t + 1
-      , maxPrefix = newMaxPrefix
-      , maxSuffix = if null cs then newMaxPrefix else maxSuffix t
-      , strReversedPrefix = if null cs then Seq.empty else strReversedPrefix t Seq.|> c
-      , strSuffix = cs
-      , palindromes = newMaxPrefix : palindromes t
+      { strLen             = strLen t + 1
+      , maxPrefix          = newMaxPrefix
+      , maxSuffix          = if null cs then newMaxPrefix else maxSuffix t
+      , strReversedPrefix  = if null cs then Seq.empty else strReversedPrefix t Seq.|> c
+      , strSuffix          = cs
+      , palindromes        = newMaxPrefix : palindromes t
+      , fromEERTREE        = c Seq.<| fromEERTREE t
+      , reverseFromEERTREE = reverseFromEERTREE t Seq.|> c
       } where
         newMaxPrefix = edge c (maxPrefix t)
     _ ->
       case newSuffixOf c (maxPrefix t) of
         newMaxPrefix -> EERTREE
-          { strLen = strLen t + 1
-          , maxPrefix = newMaxPrefix
-          , maxSuffix = if null newStrSuffix then newMaxPrefix else maxSuffix t
-          , strReversedPrefix = if null newStrSuffix then Seq.empty else strReversedPrefix t Seq.|> c
-          , strSuffix = newStrSuffix
-          , palindromes = newMaxPrefix : palindromes t
+          { strLen             = strLen t + 1
+          , maxPrefix          = newMaxPrefix
+          , maxSuffix          = if null newStrSuffix then newMaxPrefix else maxSuffix t
+          , strReversedPrefix  = if null newStrSuffix then Seq.empty else strReversedPrefix t Seq.|> c
+          , strSuffix          = newStrSuffix
+          , palindromes        = newMaxPrefix : palindromes t
+          , fromEERTREE        = c Seq.<| fromEERTREE t
+          , reverseFromEERTREE = reverseFromEERTREE t Seq.|> c
           } where
-              newStrSuffix = Seq.fromList (drop n (c : fromEERTREE t))
+              newStrSuffix = Seq.drop (n - 1) (fromEERTREE t)
               n = len newMaxPrefix
 
 -- | Add a symbol to the end of a string
@@ -152,29 +148,28 @@ merge t1 t2
       s1 = reverseFromEERTREE t1
       s2 = fromEERTREE t2
 
-      pals1 = palindromes t1
-      pals2 = palindromes t2
-
       -- | Merge by prepending symbols to `t2`
       mergeLeft s1' t2' pals
         | null s1'           = t2'
         | c1 <= newPalCenter = mergeLeft cs (prepend c t2') (newPal : pals)
-        | otherwise          = t2' { strLen            = strLen t1 + strLen t2
-                                   , maxPrefix         = maxPrefix t1
-                                   , strReversedPrefix = strReversedPrefix t2' <> Seq.fromList s1'
-                                   , strSuffix         = strSuffix t1 <> Seq.fromList (fromEERTREE t2)
-                                   , palindromes       = pals <> pals1 <> pals2
+        | otherwise          = t2' { strLen             = strLen t1 + strLen t2
+                                   , maxPrefix          = maxPrefix t1
+                                   , strReversedPrefix  = strReversedPrefix t2' <> s1'
+                                   , strSuffix          = strSuffix t1 <> fromEERTREE t2
+                                   , palindromes        = pals <> palindromes t1 <> palindromes t2
+                                   , fromEERTREE        = Seq.reverse s1' <> fromEERTREE t2'
+                                   , reverseFromEERTREE = reverseFromEERTREE t2' <> Seq.reverse s1'
                                    }
         where
           -- | Symbol to prepend
-          (cs, c) = case s1' of
-                      []     -> ([], Symbol 0)
-                      x : xs -> (xs, x)
+          (cs, c) = case Seq.viewl s1' of
+                      Seq.EmptyL  -> (Seq.empty, Symbol 0)
+                      x Seq.:< xs -> (xs, x)
 
           -- | New palindrome
           newPal = case Seq.viewl (strSuffix t2') of
-            x Seq.:< _ | c == x -> edge c (maxPrefix t2')
-            _                   -> newSuffixOf c (maxPrefix t2')
+                     x Seq.:< _ | c == x -> edge c (maxPrefix t2')
+                     _                   -> newSuffixOf c (maxPrefix t2')
 
           -- | Center of a new palindrome
           newPalCenter = fromIntegral (length s1') + fromIntegral (len newPal) / 2
@@ -183,22 +178,24 @@ merge t1 t2
       mergeRight t1' s2' pals
         | null s2'           = t1'
         | newPalCenter <= c2 = mergeRight (append c t1') cs (newPal : pals)
-        | otherwise          = t1' { strLen            = strLen t1 + strLen t2
-                                   , maxSuffix         = maxSuffix t2
-                                   , strReversedPrefix = strReversedPrefix t2 <> Seq.fromList (reverseFromEERTREE t1)
-                                   , strSuffix         = strSuffix t1' <> Seq.fromList s2'
-                                   , palindromes       = pals <> pals1 <> pals2
+        | otherwise          = t1' { strLen             = strLen t1 + strLen t2
+                                   , maxSuffix          = maxSuffix t2
+                                   , strReversedPrefix  = strReversedPrefix t2 <> reverseFromEERTREE t1
+                                   , strSuffix          = strSuffix t1' <> s2'
+                                   , palindromes        = pals <> palindromes t1 <> palindromes t2
+                                   , fromEERTREE        = fromEERTREE t1' <> s2'
+                                   , reverseFromEERTREE = Seq.reverse s2' <> reverseFromEERTREE t1'
                                    }
         where
           -- | Symbol to append
-          (c, cs) = case s2' of
-                      []     -> (Symbol 0, [])
-                      x : xs -> (x, xs)
+          (c, cs) = case Seq.viewl s2' of
+                      Seq.EmptyL  -> (Symbol 0, Seq.empty)
+                      x Seq.:< xs -> (x, xs)
 
           -- | New palindrome
           newPal = case Seq.viewl (strReversedPrefix t1') of
-            x Seq.:< _ | c == x -> edge c (maxSuffix t1')
-            _                   -> newSuffixOf c (maxSuffix t1')
+                     x Seq.:< _ | c == x -> edge c (maxSuffix t1')
+                     _                   -> newSuffixOf c (maxSuffix t1')
 
           -- | Center of a new palindrome
           newPalCenter = fromIntegral (strLen t1') - fromIntegral (len newPal) / 2
@@ -225,7 +222,7 @@ mergeLinear t1 t2
 -- >>> subpalindromes @2 [0,1,0,0,1]
 -- [[0,1,0],[1,0,0,1],[0,0],[0],[1]]
 subpalindromes :: KnownNat n => [Symbol n] -> [[Symbol n]]
-subpalindromes = map value . nub . palindromes . eertree
+subpalindromes = map (F.toList . value) . nub . palindromes . eertree
 
 -- | Compute first \(n\) elements of <https://oeis.org/A216264 A216264 sequence>
 -- (binary rich strings count for \(n = 0, 1, \ldots\)).

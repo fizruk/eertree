@@ -9,6 +9,7 @@ module EERTREE.Node where
 import           Data.Bits                    (clearBit, countTrailingZeros,
                                                shiftL)
 import           Data.Coerce                  (coerce)
+import qualified Data.Foldable                as F
 import           Data.Function                (on)
 import           Data.IntMap                  (IntMap)
 import qualified Data.IntMap                  as IntMap
@@ -16,6 +17,8 @@ import qualified Data.List                    as List
 import           Data.Maybe                   (fromMaybe)
 import           Data.Ord                     (comparing)
 import           Data.Proxy
+import           Data.Sequence                (Seq)
+import qualified Data.Sequence                as Seq
 import           Data.Vector                  (Vector)
 import qualified Data.Vector                  as Vector
 import           GHC.TypeLits                 (KnownNat, Nat, natVal)
@@ -32,6 +35,7 @@ import           EERTREE.Symbol
 data Node (n :: Nat) = Node
   { index     :: !Integer
   , len       :: !Int
+  , value     :: Seq (Symbol n)
   , parent    :: Maybe (Symbol n, Node n)
   , ancestors :: Vector (Node n)
   , edges     :: Vector (Weakly (Node n))
@@ -49,7 +53,7 @@ instance Ord (Node n) where
 instance Show (Node n) where
   show node
     | len node < 0 = "oddNode"
-    | otherwise    = "fromPalindrome " ++ show (value node)
+    | otherwise    = "fromPalindrome " ++ show (F.toList (value node))
 
 -- | First (last) symbol of a palindrome.
 --
@@ -154,17 +158,6 @@ symbolAt' i t = do
 pathTo :: Node n -> [Symbol n]
 pathTo = List.unfoldr parent
 
--- | Value of a node (its palindrome).
---
--- >>> value (fromPalindrome @2 [1,1,0,1,1])
--- [1,1,0,1,1]
-value :: Node n -> [Symbol n]
-value t
-  | even (len t) = s <> reverse s
-  | otherwise    = s <> drop 1 (reverse s)
-  where
-    s = pathTo t
-
 -- | Build a 'Vector' of a node's parent ancestors
 -- that are $2^i$ edges away from the node.
 --
@@ -189,6 +182,7 @@ mkEdge c parentNode = t
     t = Node
       { index     = newIndex
       , len       = len parentNode + 2
+      , value     = newValue parentNode
       , parent    = Just (c, parentNode)
       , ancestors = getAncestors parentNode
       , edges     = Vector.fromListN (fromInteger n)
@@ -196,6 +190,11 @@ mkEdge c parentNode = t
       , links     = mkDirectLinks c parentNode
       }
 
+    newValue node
+      | node == oddNode  = Seq.singleton c
+      | node == evenNode = Seq.fromList [c,c]
+      | otherwise        = (c Seq.<| value parentNode) Seq.|> c
+    
     newIndex = i `shiftL` k + signum i * fromIntegral (fromSymbol c)
     i = index parentNode
     k = 1 + integerLog2' (n - 1)
@@ -246,6 +245,7 @@ evenNode :: forall n. KnownNat n => Node n
 evenNode = Node
   { index = 1
   , len   = 0
+  , value = Seq.empty
   , parent = Nothing
   , ancestors = Vector.empty
   , edges = Vector.fromListN n [ applyWeakly (mkEdge c) evenNode | c <- alphabet ]
@@ -267,6 +267,7 @@ oddNode :: forall n. KnownNat n => Node n
 oddNode = Node
   { index = -1
   , len   = -1
+  , value = Seq.empty
   , parent = Nothing
   , ancestors = Vector.empty
   , edges = Vector.fromListN n [ applyWeakly (mkEdge c) oddNode | c <- alphabet ]
