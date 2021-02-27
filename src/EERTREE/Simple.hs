@@ -32,8 +32,6 @@ data EERTREE n = EERTREE
   , strReversedPrefix  :: Seq (Symbol n) -- ^ Prefix, preceding maximum palindromic suffix
   , strSuffix          :: Seq (Symbol n) -- ^ Suffix, following maximum palindromic prefix.
   , palindromes        :: [Node n]       -- ^ Accumulated list of encountered palindromes.
-  , fromEERTREE        :: Seq (Symbol n) -- ^ Get the string back from eertree
-  , reverseFromEERTREE :: Seq (Symbol n) -- ^ Get the reversed string from eertree
   } deriving (Eq, Show)
 
 instance KnownNat n => IsString (EERTREE n) where
@@ -48,8 +46,6 @@ empty = EERTREE
   , strReversedPrefix  = Seq.empty
   , strSuffix          = Seq.empty
   , palindromes        = []
-  , fromEERTREE        = Seq.empty
-  , reverseFromEERTREE = Seq.empty
   }
 
 -- | An eertree for a singleton string.
@@ -82,9 +78,21 @@ reverseEERTREE t = t { maxPrefix          = maxSuffix t
                      , maxSuffix          = maxPrefix t
                      , strReversedPrefix  = strSuffix t
                      , strSuffix          = strReversedPrefix t
-                     , fromEERTREE        = reverseFromEERTREE t
-                     , reverseFromEERTREE = fromEERTREE t
                      }
+
+-- | Get the string back from an eertree.
+--
+-- >>> fromEERTREE @2 "01001"
+-- [0,1,0,0,1]
+fromEERTREE :: EERTREE n -> Seq (Symbol n)
+fromEERTREE t = value (maxPrefix t) <> strSuffix t
+
+-- | Get the reversed string from an eertree
+--
+-- >>> reverseFromEERTREE @2 "01001"
+-- [1,0,0,1,0]
+reverseFromEERTREE :: EERTREE n -> Seq (Symbol n)
+reverseFromEERTREE t = value (maxSuffix t) <> strReversedPrefix t
 
 -- | Add a symbol to the beginning of a string
 -- corresponding to an eertree.
@@ -101,8 +109,6 @@ prepend c t =
       , strReversedPrefix  = if null cs then Seq.empty else strReversedPrefix t Seq.|> c
       , strSuffix          = cs
       , palindromes        = newMaxPrefix : palindromes t
-      , fromEERTREE        = c Seq.<| fromEERTREE t
-      , reverseFromEERTREE = reverseFromEERTREE t Seq.|> c
       } where
         newMaxPrefix = edge c (maxPrefix t)
     _ ->
@@ -114,10 +120,8 @@ prepend c t =
           , strReversedPrefix  = if null newStrSuffix then Seq.empty else strReversedPrefix t Seq.|> c
           , strSuffix          = newStrSuffix
           , palindromes        = newMaxPrefix : palindromes t
-          , fromEERTREE        = c Seq.<| fromEERTREE t
-          , reverseFromEERTREE = reverseFromEERTREE t Seq.|> c
           } where
-              newStrSuffix = Seq.drop (n - 1) (fromEERTREE t)
+              newStrSuffix = Seq.drop (n - 1) (value (maxPrefix t)) <> strSuffix t
               n = len newMaxPrefix
 
 -- | Add a symbol to the end of a string
@@ -157,8 +161,6 @@ merge t1 t2
                                    , strReversedPrefix  = strReversedPrefix t2' <> s1'
                                    , strSuffix          = strSuffix t1 <> fromEERTREE t2
                                    , palindromes        = pals <> palindromes t1 <> palindromes t2
-                                   , fromEERTREE        = Seq.reverse s1' <> fromEERTREE t2'
-                                   , reverseFromEERTREE = reverseFromEERTREE t2' <> Seq.reverse s1'
                                    }
         where
           -- | Symbol to prepend
@@ -183,8 +185,6 @@ merge t1 t2
                                    , strReversedPrefix  = strReversedPrefix t2 <> reverseFromEERTREE t1
                                    , strSuffix          = strSuffix t1' <> s2'
                                    , palindromes        = pals <> palindromes t1 <> palindromes t2
-                                   , fromEERTREE        = fromEERTREE t1' <> s2'
-                                   , reverseFromEERTREE = Seq.reverse s2' <> reverseFromEERTREE t1'
                                    }
         where
           -- | Symbol to append
