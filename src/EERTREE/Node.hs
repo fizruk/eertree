@@ -161,7 +161,7 @@ pathTo = List.unfoldr parent
 -- | Build a 'Vector' of a node's parent ancestors
 -- that are $2^i$ edges away from the node.
 --
--- >>> value <$> getAncestors (fromPalindrome @2 [1,0,1,0,1,0,1])
+-- >>> (F.toList . value) <$> getAncestors (fromPalindrome @2 [1,0,1,0,1,0,1])
 -- [[1,0,1,0,1,0,1],[0,1,0,1,0],[0]]
 getAncestors :: Node a -> Vector (Node a)
 getAncestors = Vector.fromList . go 0 . Just

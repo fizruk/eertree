@@ -84,15 +84,21 @@ reverseEERTREE t = t { maxPrefix          = maxSuffix t
 --
 -- >>> fromEERTREE @2 "01001"
 -- [0,1,0,0,1]
-fromEERTREE :: EERTREE n -> Seq (Symbol n)
-fromEERTREE t = value (maxPrefix t) <> strSuffix t
+fromEERTREE :: EERTREE n -> [Symbol n]
+fromEERTREE = F.toList . eertreeToSeq
+
+eertreeToSeq :: EERTREE n -> Seq (Symbol n)
+eertreeToSeq t = value (maxPrefix t) <> strSuffix t
 
 -- | Get the reversed string from an eertree
 --
 -- >>> reverseFromEERTREE @2 "01001"
 -- [1,0,0,1,0]
-reverseFromEERTREE :: EERTREE n -> Seq (Symbol n)
-reverseFromEERTREE t = value (maxSuffix t) <> strReversedPrefix t
+reverseFromEERTREE :: EERTREE n -> [Symbol n]
+reverseFromEERTREE = F.toList . eertreeToSeqReversed
+
+eertreeToSeqReversed :: EERTREE n -> Seq (Symbol n)
+eertreeToSeqReversed t = value (maxSuffix t) <> strReversedPrefix t
 
 -- | Add a symbol to the beginning of a string
 -- corresponding to an eertree.
@@ -149,8 +155,8 @@ merge t1 t2
       c2 = fromIntegral (strLen t1) + fromIntegral (len (maxPrefix t2)) / 2
 
       -- | Strings representing the eertrees
-      s1 = reverseFromEERTREE t1
-      s2 = fromEERTREE t2
+      s1 = eertreeToSeqReversed t1
+      s2 = eertreeToSeq t2
 
       -- | Merge by prepending symbols to `t2`
       mergeLeft s1' t2' pals
@@ -159,7 +165,7 @@ merge t1 t2
         | otherwise          = t2' { strLen             = strLen t1 + strLen t2
                                    , maxPrefix          = maxPrefix t1
                                    , strReversedPrefix  = strReversedPrefix t2' <> s1'
-                                   , strSuffix          = strSuffix t1 <> fromEERTREE t2
+                                   , strSuffix          = strSuffix t1 <> eertreeToSeq t2
                                    , palindromes        = pals <> palindromes t1 <> palindromes t2
                                    }
         where
@@ -182,7 +188,7 @@ merge t1 t2
         | newPalCenter <= c2 = mergeRight (append c t1') cs (newPal : pals)
         | otherwise          = t1' { strLen             = strLen t1 + strLen t2
                                    , maxSuffix          = maxSuffix t2
-                                   , strReversedPrefix  = strReversedPrefix t2 <> reverseFromEERTREE t1
+                                   , strReversedPrefix  = strReversedPrefix t2 <> eertreeToSeqReversed t1
                                    , strSuffix          = strSuffix t1' <> s2'
                                    , palindromes        = pals <> palindromes t1 <> palindromes t2
                                    }
@@ -212,8 +218,8 @@ mergeLinear t1 t2
   | strLen t1 < strLen t2 = foldr prepend t2 s1
   | otherwise             = foldr append t1 s2
     where
-      s1 = fromEERTREE t1
-      s2 = reverseFromEERTREE t2
+      s1 = eertreeToSeq t1
+      s2 = eertreeToSeqReversed t2
 
 -- * Applications
 
