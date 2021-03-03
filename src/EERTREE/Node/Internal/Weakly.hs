@@ -1,6 +1,7 @@
 {-# LANGUAGE ExistentialQuantification #-}
 module EERTREE.Node.Internal.Weakly where
 
+import           Control.DeepSeq
 import           Data.IORef
 import           System.IO.Unsafe (unsafePerformIO)
 import           System.Mem.Weak
@@ -22,6 +23,10 @@ data Weakly a = forall b. Weakly
   , wrIngredient :: b               -- ^ Source.
   , wrResult     :: IORef (Weak a)  -- ^ A weak link to result.
   }
+
+-- | ...
+instance NFData (Weakly a) where
+  rnf _ = ()
 
 --  instance Functor Weakly where
 --    fmap f = applyWeakly (f . fromWeakly)

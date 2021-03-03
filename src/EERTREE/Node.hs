@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds                  #-}
+{-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE DerivingStrategies         #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE KindSignatures             #-}
@@ -6,6 +7,7 @@
 {-# LANGUAGE TypeApplications           #-}
 module EERTREE.Node where
 
+import           Control.DeepSeq
 import           Data.Bits                    (clearBit, countTrailingZeros,
                                                shiftL)
 import           Data.Coerce                  (coerce)
@@ -21,6 +23,7 @@ import           Data.Sequence                (Seq)
 import qualified Data.Sequence                as Seq
 import           Data.Vector                  (Vector)
 import qualified Data.Vector                  as Vector
+import           GHC.Generics
 import           GHC.TypeLits                 (KnownNat, Nat, natVal)
 import           Math.NumberTheory.Logarithms (integerLog2')
 
@@ -40,7 +43,8 @@ data Node (n :: Nat) = Node
   , ancestors :: Vector (Node n)
   , edges     :: Vector (Weakly (Node n))
   , links     :: IntMap (Node n)
-  }
+  } deriving (Generic)
+instance NFData (Node n)
 
 -- | Nodes are compared by index.
 instance Eq (Node n) where
@@ -194,7 +198,7 @@ mkEdge c parentNode = t
       | node == oddNode  = Seq.singleton c
       | node == evenNode = Seq.fromList [c,c]
       | otherwise        = (c Seq.<| value parentNode) Seq.|> c
-    
+
     newIndex = i `shiftL` k + signum i * fromIntegral (fromSymbol c)
     i = index parentNode
     k = 1 + integerLog2' (n - 1)

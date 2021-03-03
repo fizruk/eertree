@@ -1,8 +1,10 @@
 {-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE DeriveGeneric       #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
 module EERTREE.Simple where
 
+import           Control.DeepSeq             (NFData)
 import           Data.Char                   (digitToInt)
 import qualified Data.Foldable               as F
 import           Data.List                   (maximumBy, nub)
@@ -12,6 +14,7 @@ import           Data.Ord                    (comparing)
 import           Data.Sequence               (Seq)
 import qualified Data.Sequence               as Seq
 import           Data.String                 (IsString (..))
+import           GHC.Generics                (Generic)
 import           GHC.TypeLits                (KnownNat)
 
 import           Control.Monad.ST            (runST)
@@ -26,13 +29,14 @@ import           EERTREE.Symbol
 
 -- | A palindromic tree for some string with auxillary information.
 data EERTREE n = EERTREE
-  { strLen             :: !Int           -- ^ Length of the analysed string.
-  , maxPrefix          :: Node n         -- ^ Maximum palindromic prefix.
-  , maxSuffix          :: Node n         -- ^ Maximum palindromic suffix
-  , strReversedPrefix  :: Seq (Symbol n) -- ^ Prefix, preceding maximum palindromic suffix
-  , strSuffix          :: Seq (Symbol n) -- ^ Suffix, following maximum palindromic prefix.
-  , palindromes        :: [Node n]       -- ^ Accumulated list of encountered palindromes.
-  } deriving (Eq, Show)
+  { strLen            :: !Int           -- ^ Length of the analysed string.
+  , maxPrefix         :: Node n         -- ^ Maximum palindromic prefix.
+  , maxSuffix         :: Node n         -- ^ Maximum palindromic suffix
+  , strReversedPrefix :: Seq (Symbol n) -- ^ Prefix, preceding maximum palindromic suffix
+  , strSuffix         :: Seq (Symbol n) -- ^ Suffix, following maximum palindromic prefix.
+  , palindromes       :: [Node n]       -- ^ Accumulated list of encountered palindromes.
+  } deriving (Eq, Show, Generic)
+instance NFData (EERTREE n)
 
 instance KnownNat n => IsString (EERTREE n) where
   fromString = eertreeFromString
