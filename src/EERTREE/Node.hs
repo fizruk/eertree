@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds                  #-}
 {-# LANGUAGE DeriveGeneric              #-}
+{-# LANGUAGE DeriveAnyClass             #-}
 {-# LANGUAGE DerivingStrategies         #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE KindSignatures             #-}
@@ -44,8 +45,16 @@ data Node (n :: Nat) = Node
   , edges     :: Vector (Weakly (Node n))
   , links     :: IntMap (Node n)
   } deriving (Generic)
-instance NFData (Node n)
 
+-- | Leave links out as they create loops
+instance NFData (Node n) where
+  rnf (Node i l v p a e _) = rnf i `deepseq`
+                             rnf l `deepseq`
+                             rnf v `deepseq`
+                             rnf p `deepseq`
+                             rnf a `deepseq`
+                             rnf e
+  
 -- | Nodes are compared by index.
 instance Eq (Node n) where
   (==) = (==) `on` index
