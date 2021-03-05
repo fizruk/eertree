@@ -151,8 +151,8 @@ append c t = reverseEERTREE (prepend c (reverseEERTREE t))
 -- [1,0,0,1,0,0,1,1,0,0,1,0,1,1,0]
 merge :: KnownNat n => EERTREE n -> EERTREE n -> EERTREE n
 merge t1 t2
-  | strLen t1 < strLen t2 = mergeLeft  s1 t2 []
-  | otherwise             = mergeRight t1 s2 []
+  | strLen t1 <= strLen t2 = mergeLeft  s1 t2 []
+  | otherwise              = mergeRight t1 s2 []
     where
       -- | Centers of max suffix and prefix
       c1 = fromIntegral (strLen t1) - fromIntegral (len (maxSuffix t1)) / 2

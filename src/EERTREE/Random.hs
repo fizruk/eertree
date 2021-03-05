@@ -18,8 +18,8 @@ import           Test.QuickCheck
 --
 -- > genRandomSymbols @4 10
 -- [3,2,3,1,2,3,0,0,2,0]
-genRandomSymbols :: KnownNat n => Int -> IO [Symbol n]
-genRandomSymbols n = generate (randomSymbols n)
+randomSymbolsIO :: KnownNat n => Int -> IO [Symbol n]
+randomSymbolsIO n = generate (randomSymbols n)
 
 -- | Generator for list of random symbols of length @len@
 randomSymbols :: KnownNat n => Int -> Gen [Symbol n]
@@ -31,6 +31,13 @@ randomEERTREE len = do
   symbols <- randomSymbols len
   let t = eertree symbols
   return t
+
+-- | Generate pair of random eertrees of lengths @len1@ and @len2@
+randomEERTREEpairIO :: KnownNat n => Int -> Int -> IO (EERTREE n, EERTREE n)
+randomEERTREEpairIO len1 len2 = do
+    t1 <- generate (randomEERTREE len1)
+    t2 <- generate (randomEERTREE len2)
+    return (t1, t2)
 
 -- | Count number of new palindromes after merging two random eertrees
 randomMerge :: forall n. KnownNat n => Proxy n -> Int -> Gen Int
