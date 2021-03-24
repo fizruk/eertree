@@ -1,6 +1,6 @@
 {-# LANGUAGE DataKinds                  #-}
-{-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE DeriveAnyClass             #-}
+{-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE DerivingStrategies         #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE KindSignatures             #-}
@@ -28,6 +28,7 @@ import           GHC.Generics
 import           GHC.TypeLits                 (KnownNat, Nat, natVal)
 import           Math.NumberTheory.Logarithms (integerLog2')
 
+import           EERTREE.Alphabet.Class       (alphabet)
 import           EERTREE.Node.Internal.Weakly
 import           EERTREE.Symbol
 
@@ -54,7 +55,7 @@ instance NFData (Node n) where
                              rnf p `deepseq`
                              rnf a `deepseq`
                              rnf e
-  
+
 -- | Nodes are compared by index.
 instance Eq (Node n) where
   (==) = (==) `on` index
@@ -262,7 +263,7 @@ evenNode = Node
   , parent = Nothing
   , ancestors = Vector.empty
   , edges = Vector.fromListN n [ applyWeakly (mkEdge c) evenNode | c <- alphabet ]
-  , links = IntMap.fromList [ (coerce c, oddNode) | c <- alphabet @n ]
+  , links = IntMap.fromList [ (coerce c, oddNode) | c <- alphabet @(Symbol n) ]
   }
   where
     n = fromInteger (natVal (Proxy @n))
@@ -284,7 +285,7 @@ oddNode = Node
   , parent = Nothing
   , ancestors = Vector.empty
   , edges = Vector.fromListN n [ applyWeakly (mkEdge c) oddNode | c <- alphabet ]
-  , links = IntMap.fromList [ (coerce c, oddNode) | c <- alphabet @n ]
+  , links = IntMap.fromList [ (coerce c, oddNode) | c <- alphabet @(Symbol n) ]
   }
   where
     n = fromInteger (natVal (Proxy @n))

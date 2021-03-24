@@ -3,15 +3,16 @@
 {-# LANGUAGE TypeApplications    #-}
 
 import           Test.Hspec
-import           Test.Hspec.Contrib.HUnit    (fromHUnitTest)
+import           Test.Hspec.Contrib.HUnit (fromHUnitTest)
 import           Test.HUnit
 
-import           Data.List                   (intercalate)
+import           Data.List                (intercalate)
 import           Data.Proxy
-import qualified Data.Set                    as S
-import           GHC.TypeLits                (KnownNat, natVal)
+import qualified Data.Set                 as S
+import           GHC.TypeLits             (KnownNat, natVal)
 
-import EERTREE.Simple
+import           EERTREE.Simple
+import           EERTREE.Symbol
 
 main :: IO ()
 main = hspec $ do
@@ -63,7 +64,7 @@ testStrings :: [String]
 testStrings = generateStrings 3 5
 
 -- | Generate eertrees from all strings of alphabet size @n@ and of length @m@
-generateEERTREEs :: forall n. KnownNat n => Int -> [EERTREE n]
+generateEERTREEs :: forall n. KnownNat n => Int -> [EERTREE (Symbol n)]
 generateEERTREEs m = map (eertreeFromString @n) (generateStrings (fromInteger (natVal (Proxy @n))) m)
 
 -- | Generate all strings of alphabet size @n@ and of length @m@
@@ -79,7 +80,7 @@ generateStrings n m = take ((n^(m + 1) - 1) `div` (n - 1)) buildStrings -- Sum o
     alpha = map show [0 .. n-1]
 
 -- | Compare EERTREEs
-compareEERTREEs :: KnownNat n => EERTREE n -> EERTREE n -> Bool
+compareEERTREEs :: KnownNat n => EERTREE (Symbol n) -> EERTREE (Symbol n) -> Bool
 compareEERTREEs t1 t2 =
   maxPrefix t1 == maxPrefix t2 &&
   maxSuffix t1 == maxSuffix t2 &&

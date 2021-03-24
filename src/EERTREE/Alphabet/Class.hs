@@ -113,3 +113,12 @@ instance (Known a x, ListToValues a xs) => ListToValues a (x:xs) where
 
 alphabetSize :: forall a. Alphabet a => Proxy a -> Integer
 alphabetSize _ = natVal (Proxy @(AlphabetSize a))
+
+-- | Symbols of an alphabet of size @n@.
+--
+-- >>> alphabet @(Symbol 2)
+-- [0,1]
+-- >>> alphabet @(Symbol 10)
+-- [0,1,2,3,4,5,6,7,8,9]
+alphabet :: Alphabet a => [a]
+alphabet = map toAlphabet [minBound..maxBound]

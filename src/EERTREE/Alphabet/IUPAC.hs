@@ -4,6 +4,9 @@ module EERTREE.Alphabet.IUPAC where
 import           Data.String            (IsString (..))
 import           EERTREE.Alphabet.Class
 
+-- $setup
+-- >>> :set -XOverloadedStrings
+
 type SymbolRNA = PalindromeAlphabet (FixedAlphabet ["A","C","G","U"])
 
 type SymbolDNA = PalindromeAlphabet (FixedAlphabet ["A","C","G","T"])
