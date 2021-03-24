@@ -30,7 +30,7 @@ eertreeBenchmarkList _ lens = [ env (randomSymbolsIO @n len)
                               | len <- lens ]
 
 -- | Merge two eertrees and show the number of new palindromes
-benchRandomMerge :: KnownNat n => EERTREE n -> EERTREE n -> String
+benchRandomMerge :: KnownNat n => EERTREE (Symbol n) -> EERTREE (Symbol n) -> String
 benchRandomMerge t1 t2 = show newPals
   where
     t = merge t1 t2
@@ -49,14 +49,14 @@ mergeBenchmarkList _ lens = [ env (randomEERTREEpairIO @n len1 len2)
 
 main :: IO ()
 main = defaultMain
-  ( 
+  (
     eertreeAt2 ++ eertreeAt4 ++
     mergeLeftAt2 ++ mergeRightAt2 ++ mergeAt2 ++
     mergeLeftAt4 ++ mergeRightAt4 ++ mergeAt4
   )
     where
       s = 10000
-      
+
       -- | Lists of benchmarks for eertrees of lenths 1s, 2s, 4s, 8s, and 16s
       -- and alphabet sizes 2 and 4 respectively
       eertreeAt2 = eertreeBenchmarkList (Proxy @2) powersOf2
@@ -80,9 +80,9 @@ main = defaultMain
 
       -- | List of pairs (1s, 1s), (2s, 1s), (4s, 1s), (8s, 1s), (16s, 1s)
       leftPowersOf2 = take 5 [ (s * 2^x, s) | x <- [0..] ]
-      
+
       -- | List of pairs (1s, 1s), (1s, 2s), (1s, 4s), (1s, 8s), (1s, 16s)
       rightPowersOf2 = take 5 [ (s, s * 2^x) | x <- [0..] ]
-      
+
       -- | List of pairs (1s, 1s), (2s, 2s), (4s, 4s), (8s, 8s), (16s, 16s)
       bothPowersOf2 = take 5 [ (s * 2^x, s * 2^x) | x <- [0..] ]
