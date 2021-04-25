@@ -76,9 +76,33 @@ tests:
     - template-haskell
 
 benchmarks:
-  bench:
-    main:                Main.hs
-    source-dirs:         bench
+  simple:
+    main:        Main.hs
+    source-dirs: bench/simple
+    ghc-options:
+    - -threaded
+    - -O2
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - criterion
+    - eertree
+
+  list:
+    main:        Main.hs
+    source-dirs: bench/list
+    ghc-options:
+    - -threaded
+    - -O2
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - criterion
+    - eertree
+
+  node:
+    main:        Main.hs
+    source-dirs: bench/node
     ghc-options:
     - -threaded
     - -O2

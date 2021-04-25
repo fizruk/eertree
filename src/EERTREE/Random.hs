@@ -6,6 +6,7 @@ import           Control.Monad   (replicateM)
 import           Data.Proxy      (Proxy)
 import           GHC.TypeLits    (KnownNat)
 
+import           EERTREE.Node
 import           EERTREE.Simple
 import           EERTREE.Symbol
 
@@ -25,6 +26,25 @@ randomSymbolsIO n = generate (randomSymbols n)
 randomSymbols :: KnownNat n => Int -> Gen [Symbol n]
 randomSymbols len = replicateM len (elements alphabet)
 
+randomPalindromeIO :: KnownNat n => Int -> IO [Symbol n]
+randomPalindromeIO len = generate (randomPalindrome len)
+
+randomPalindrome :: KnownNat n => Int -> Gen [Symbol n]
+randomPalindrome len = do
+  half <- randomSymbols (len `div` 2)
+  return (half ++ reverse half)
+
+-- | Generate node of random symbols of length @len@
+randomNodeIO :: KnownNat n => Int -> IO (Node n)
+randomNodeIO len = generate (randomNode len)
+
+-- | Generator for node of random symbols of length @len@
+randomNode :: KnownNat n => Int -> Gen (Node n)
+randomNode len = do
+  half <- randomSymbols (len `div` 2)
+  let node = fromPalindrome (half ++ reverse half)
+  return node
+
 -- | Generator for eertree from random list of symbols of length @len@
 randomEERTREE :: KnownNat n => Int -> Gen (EERTREE n)
 randomEERTREE len = do
@@ -35,9 +55,9 @@ randomEERTREE len = do
 -- | Generate pair of random eertrees of lengths @len1@ and @len2@
 randomEERTREEpairIO :: KnownNat n => Int -> Int -> IO (EERTREE n, EERTREE n)
 randomEERTREEpairIO len1 len2 = do
-    t1 <- generate (randomEERTREE len1)
-    t2 <- generate (randomEERTREE len2)
-    return (t1, t2)
+  t1 <- generate (randomEERTREE len1)
+  t2 <- generate (randomEERTREE len2)
+  return (t1, t2)
 
 -- | Count number of new palindromes after merging two random eertrees
 randomMerge :: forall n. KnownNat n => Proxy n -> Int -> Gen Int
