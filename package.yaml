@@ -111,3 +111,20 @@ benchmarks:
     dependencies:
     - criterion
     - eertree
+
+  cpp:
+    main:        Main.hs
+    source-dirs: bench/cpp
+    ghc-options:
+    - -threaded
+    - -O2
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - bytestring
+    - criterion
+    - eertree
+    # - inline-c
+    - inline-c-cpp
+    - template-haskell
+    - utf8-string
