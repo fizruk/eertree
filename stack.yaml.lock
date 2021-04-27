@@ -3,7 +3,46 @@
 # For more information, please see the documentation at:
 #   https://docs.haskellstack.org/en/stable/lock_files
 
-packages: []
+packages:
+- completed:
+    hackage: Chart-cairo-1.9.3@sha256:f484a7194ca08ed67f02aa626e2f8f4d1a9b50624e0d50e3ced62958f7481cca,925
+    pantry-tree:
+      size: 238
+      sha256: 585b99e27718747d3c9a46bf46625774a06d102f77bf9fe8384d278914068ec7
+  original:
+    hackage: Chart-cairo-1.9.3
+- completed:
+    hackage: cairo-0.13.8.1@sha256:1938aaeb5d3504678d995774dfe870f6b66cbd43d336b692fa8779b23b2b67a9,4075
+    pantry-tree:
+      size: 2830
+      sha256: 8f6344da4c578a4dd3a49c333e2158b695bfae32a74d34a76bbc6e531b70c95c
+  original:
+    hackage: cairo-0.13.8.1
+- completed:
+    hackage: haskell-src-1.0.3.1@sha256:ce567daac8daf14068784f473baecef70e383840ef829386a2481e0fb26730e3,1615
+    pantry-tree:
+      size: 621
+      sha256: ea085b1694919dc2617aaa764fc96197a51358bf30346980c8ef3aba81e306ea
+  original:
+    hackage: haskell-src-1.0.3.1
+- completed:
+    hackage: gtk2hs-buildtools-0.13.8.0@sha256:132f38155fc677430a47ea750918973161c876fb6f281d342ac2f07eb99229ce,5238
+    pantry-tree:
+      size: 3588
+      sha256: 4552e3c0f2ef0f16285c38898d7e2b6aeea67d4e37cd203b0c82f70592096c45
+  original:
+    hackage: gtk2hs-buildtools-0.13.8.0
+- completed:
+    name: AutoBench
+    version: 0.1.0.0
+    git: https://github.com/mathandley/AutoBench
+    pantry-tree:
+      size: 5379
+      sha256: d4e5fd0d89e2ff095492b09fd3aaab5cfbfaba5aa577058a7de34c861340daa5
+    commit: 6f8629e904365ed736768e65ac15a215b95c55dc
+  original:
+    git: https://github.com/mathandley/AutoBench
+    commit: 6f8629e904365ed736768e65ac15a215b95c55dc
 snapshots:
 - completed:
     size: 563100

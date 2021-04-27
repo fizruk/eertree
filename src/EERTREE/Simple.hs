@@ -2,6 +2,7 @@
 {-# LANGUAGE DeriveGeneric       #-}
 {-# LANGUAGE FlexibleInstances   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving  #-}
 {-# LANGUAGE TypeApplications    #-}
 module EERTREE.Simple where
 
@@ -37,7 +38,9 @@ data EERTREE a = EERTREE
   , strReversedPrefix :: Seq a                    -- ^ Prefix, preceding maximum palindromic suffix
   , strSuffix         :: Seq a                    -- ^ Suffix, following maximum palindromic prefix.
   , palindromes       :: [Node (AlphabetSize a)]  -- ^ Accumulated list of encountered palindromes.
-  } deriving (Eq, Show, Generic)
+  } deriving (Eq, Generic)
+
+deriving instance (Alphabet a, Show a) => Show (EERTREE a)
 instance NFData a => NFData (EERTREE a)
 
 instance KnownNat n => IsString (EERTREE (Symbol n)) where
@@ -106,6 +109,9 @@ reverseFromEERTREE = F.toList . eertreeToSeqReversed
 eertreeToSeqReversed :: Alphabet a => EERTREE a -> Seq a
 eertreeToSeqReversed t = (toAlphabet <$> value (maxSuffix t)) <> strReversedPrefix t
 
+newSuffixOf' :: Alphabet a => a -> Node (AlphabetSize a) -> Node (AlphabetSize a)
+newSuffixOf' x = edge (fromAlphabet x) . directLink (fromAlphabet (complementOf x))
+
 -- | Add a symbol to the beginning of a string
 -- corresponding to an eertree.
 --
@@ -124,7 +130,7 @@ prepend c t =
       } where
         newMaxPrefix = edge (fromAlphabet c) (maxPrefix t)
     _ ->
-      case newSuffixOf (fromAlphabet c) (maxPrefix t) of
+      case newSuffixOf' c (maxPrefix t) of
         newMaxPrefix -> EERTREE
           { strLen             = strLen t + 1
           , maxPrefix          = newMaxPrefix
@@ -186,7 +192,7 @@ merge t1 t2
           newPal = case Seq.viewl (strSuffix t2') of
                      x Seq.:< _ | c `isComplementOf` x
                         -> edge (fromAlphabet c) (maxPrefix t2')
-                     _  -> newSuffixOf (fromAlphabet c) (maxPrefix t2')
+                     _  -> newSuffixOf' c (maxPrefix t2')
 
           -- | Center of a new palindrome
           newPalCenter = fromIntegral (length s1') + fromIntegral (len newPal) / 2
@@ -211,7 +217,7 @@ merge t1 t2
           -- | New palindrome
           newPal = case Seq.viewl (strReversedPrefix t1') of
                      x Seq.:< _ | c == x -> edge (fromAlphabet c) (maxSuffix t1')
-                     _                   -> newSuffixOf (fromAlphabet c) (maxSuffix t1')
+                     _                   -> newSuffixOf' c (maxSuffix t1')
 
           -- | Center of a new palindrome
           newPalCenter = fromIntegral (strLen t1') - fromIntegral (len newPal) / 2
@@ -238,7 +244,7 @@ mergeLinear t1 t2
 -- >>> subpalindromes @(Symbol 2) [0,1,0,0,1]
 -- [[0,1,0],[1,0,0,1],[0,0],[0],[1]]
 subpalindromes :: Alphabet a => [a] -> [[a]]
-subpalindromes = map (fmap toAlphabet . F.toList . value) . nub . palindromes . eertree
+subpalindromes = map (F.toList . value) . nub . palindromes . eertree
 
 -- | Compute first \(n\) elements of <https://oeis.org/A216264 A216264 sequence>
 -- (binary rich strings count for \(n = 0, 1, \ldots\)).

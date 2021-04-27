@@ -28,7 +28,7 @@ import           GHC.Generics
 import           GHC.TypeLits                 (KnownNat, Nat, natVal)
 import           Math.NumberTheory.Logarithms (integerLog2')
 
-import           EERTREE.Alphabet.Class       (alphabet)
+import           EERTREE.Alphabet.Class
 import           EERTREE.Node.Internal.Weakly
 import           EERTREE.Symbol
 
@@ -40,7 +40,6 @@ import           EERTREE.Symbol
 data Node (n :: Nat) = Node
   { index     :: !Integer
   , len       :: !Int
-  , value     :: Seq (Symbol n)
   , parent    :: Maybe (Symbol n, Node n)
   , ancestors :: Vector (Node n)
   , edges     :: Vector (Weakly (Node n))
@@ -49,12 +48,11 @@ data Node (n :: Nat) = Node
 
 -- | Leave links out as they create loops
 instance NFData (Node n) where
-  rnf (Node i l v p a e _) = rnf i `deepseq`
-                             rnf l `deepseq`
-                             rnf v `deepseq`
-                             rnf p `deepseq`
-                             rnf a `deepseq`
-                             rnf e
+  rnf (Node i l p a e _) = rnf i `deepseq`
+                           rnf l `deepseq`
+                           rnf p `deepseq`
+                           rnf a `deepseq`
+                           rnf e
 
 -- | Nodes are compared by index.
 instance Eq (Node n) where
@@ -64,10 +62,10 @@ instance Eq (Node n) where
 instance Ord (Node n) where
   compare = comparing index
 
-instance Show (Node n) where
+instance KnownNat n => Show (Node n) where
   show node
     | len node < 0 = "oddNode"
-    | otherwise    = "fromPalindrome " ++ show (F.toList (value node))
+    | otherwise    = "fromPalindrome " ++ show (F.toList (value @(Symbol n) node))
 
 -- | First (last) symbol of a palindrome.
 --
@@ -172,6 +170,14 @@ symbolAt' i t = do
 pathTo :: Node n -> [Symbol n]
 pathTo = List.unfoldr parent
 
+value :: Alphabet a => Node (AlphabetSize a) -> Seq a
+value node = Seq.fromList (half <> otherHalf)
+  where
+    half = toAlphabet <$> pathTo node
+    otherHalf
+      | even (len node) = complementOf <$> reverse half
+      | otherwise = complementOf <$> drop 1 (reverse half)
+
 -- | Build a 'Vector' of a node's parent ancestors
 -- that are $2^i$ edges away from the node.
 --
@@ -196,18 +202,12 @@ mkEdge c parentNode = t
     t = Node
       { index     = newIndex
       , len       = len parentNode + 2
-      , value     = newValue parentNode
       , parent    = Just (c, parentNode)
       , ancestors = getAncestors parentNode
       , edges     = Vector.fromListN (fromInteger n)
           [ applyWeakly (mkEdge c') t | c' <- alphabet ]
       , links     = mkDirectLinks c parentNode
       }
-
-    newValue node
-      | node == oddNode  = Seq.singleton c
-      | node == evenNode = Seq.fromList [c,c]
-      | otherwise        = (c Seq.<| value parentNode) Seq.|> c
 
     newIndex = i `shiftL` k + signum i * fromIntegral (fromSymbol c)
     i = index parentNode
@@ -259,7 +259,6 @@ evenNode :: forall n. KnownNat n => Node n
 evenNode = Node
   { index = 1
   , len   = 0
-  , value = Seq.empty
   , parent = Nothing
   , ancestors = Vector.empty
   , edges = Vector.fromListN n [ applyWeakly (mkEdge c) evenNode | c <- alphabet ]
@@ -281,7 +280,6 @@ oddNode :: forall n. KnownNat n => Node n
 oddNode = Node
   { index = -1
   , len   = -1
-  , value = Seq.empty
   , parent = Nothing
   , ancestors = Vector.empty
   , edges = Vector.fromListN n [ applyWeakly (mkEdge c) oddNode | c <- alphabet ]
