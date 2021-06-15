@@ -1,151 +1,169 @@
 /*
- * Taken and adopted from https://iq.opengenus.org/palindromic-tree-eertree/,
- * April 2021, for the needs of the comparative benchmarking.
+ * Taken and adapted from https://www.geeksforgeeks.org/palindromic-tree-introduction-implementation/,
+ * June 2021, for the needs of the comparative benchmarking.
  * 
- * C++ 11 code to construct an EERTREE. The method printAll
- * will print all subpalindromes stored in the tree.
+ * C++ 11 code to construct an EERTREE.
  */
-
 #include <iostream>
-#include <vector>
 #include <string>
+
+#define N 10000
 
 struct Node
 {
     int start, end;
     int len;
 
-    Node *suffix;
-    std::vector<Node *> labeled;
-
-    Node()
-    {
-        start = end = len = -1;
-        suffix = nullptr;
-        labeled.assign(26, nullptr);
-    }
+    int suffix;
+    int edges[26] = {};
 };
 
 class EERTREE
 {
 private:
-    Node *root1;
-    Node *root2;
-    Node *current;
+    Node root1;
+    Node root2;
+    Node tree[N];
+
+    int current;
+    int pointer;
 
 public:
     EERTREE()
     {
-        root1 = new Node();
-        root1->len = -1;
-        root1->suffix = root1;
+        root1.len = -1;
+        root1.suffix = 1;
 
-        root2 = new Node();
-        root2->len = 0;
-        root2->suffix = root1;
-        current = root2;
+        root2.len = 0;
+        root2.suffix = 1;
+
+        tree[1] = root1;
+        tree[2] = root2;
+
+        current = 1;
+        pointer = 2;
     }
 
-    int insert(const std::string &s, int pos)
+    void insert(const std::string s, int idx)
     {
-        Node *cur = current;
-        int letter = s[pos] - 'a';
-
+        /* 
+        * Search for Node X such that s[idx] X s[idx]
+        * is maximum palindrome ending at position idx
+        * iterate down the suffix link of current node to
+        * find X 
+        */
+        int tmp = current;
         while (true)
         {
-            // loop is guranteed to break at root1
-            if (pos - 1 - cur->len >= 0 && s[pos - 1 - cur->len] == s[pos])
+            int currentLen = tree[tmp].len;
+            if (idx - currentLen >= 1 and s[idx] == s[idx - currentLen - 1])
                 break;
-            cur = cur->suffix;
+            tmp = tree[tmp].suffix;
         }
 
-        Node *temp = new Node();
-        temp->len = cur->len + 2;
-        temp->end = pos;
-        temp->start = pos - temp->len + 1;
-        cur->labeled[letter] = temp;
-
-        if (temp->len == 1)
+        /* 
+        * Now we have found X
+        * X = string at Node tmp
+        * Check: if s[idx] X s[idx] already exists or not 
+        */
+        if (tree[tmp].edges[s[idx] - 'a'] != 0)
         {
-            // if cur is root1
-            temp->suffix = root2;
-            current = temp;
-            return 0;
+            // s[idx] X s[idx] already exists in the tree
+            current = tree[tmp].edges[s[idx] - 'a'];
+            return;
         }
 
-        // find the suffix node
+        // Creating new Node
+        pointer += 1;
 
+        // Making new Node as child of X with
+        tree[tmp].edges[s[idx] - 'a'] = pointer;
+        tree[pointer].len = tree[tmp].len + 2;
+        tree[pointer].end = idx;
+        tree[pointer].start = idx - tree[pointer].len + 1;
+
+        /* 
+        * Setting the suffix edge for the newly created
+        * Node tree[pointer]. Finding some String Y such that
+        * s[idx] + Y + s[idx] is longest possible
+        * palindromic suffix for newly created Node
+        */
+        tmp = tree[tmp].suffix;
+
+        // making new Node as current Node
+        current = pointer;
+        if (tree[current].len == 1)
+        {
+            /*
+            * If new palindrome's length is 1,
+            * make its suffix link to be null string
+            */
+            tree[current].suffix = 2;
+            return;
+        }
         while (true)
         {
-            cur = cur->suffix;
-            if ((pos - 1 - cur->len) >= 0 && s[pos - 1 - cur->len] == s[pos])
-            {
-                temp->suffix = cur->labeled[letter];
+            int currentLen = tree[tmp].len;
+            if (idx - currentLen >= 1 and s[idx] == s[idx - currentLen - 1])
                 break;
-            }
+            tmp = tree[tmp].suffix;
         }
-        current = temp;
 
-        return 0;
+        /*
+        * Now we have found string Y
+        * linking current Nodes suffix link with s[idx]+Y+s[idx]
+        */
+        tree[current].suffix = tree[tmp].edges[s[idx] - 'a'];
     }
 
-    void print(const std::string &s, Node *node)
+    void printPalindromes(const std::string &s)
     {
-        if (node != root1 || node != root2)
+        for (int i = 3; i <= pointer; i++)
         {
-            for (int i = node->start; i <= node->end; ++i)
-                std::cout << s[i];
-            std::cout << '\n';
-        }
-        for (int i = 0; i < 26; ++i)
-        {
-            if (node->labeled[i] != nullptr)
+            for (int j = tree[i].start; j <= tree[i].end; j++)
             {
-                print(s, node->labeled[i]);
+                std::cout << s[j];
             }
+            std::cout << std::endl;
         }
     }
 
-    void printAll(const std::string &s)
+    void palindromes(const std::string &s, std::string &result)
     {
-        print(s, root1);
-        print(s, root2);
-    }
-
-    void palindromes(const std::string &s, Node *node, std::string &result)
-    {
-        if (node != root1 || node != root2)
+        for (int i = 3; i <= pointer; i++)
         {
-            for (int i = node->start; i <= node->end; ++i)
-                result += s[i];
+            for (int j = tree[i].start; j <= tree[i].end; j++)
+            {
+                result += s[j];
+            }
             result += '\n';
         }
-        for (int i = 0; i < 26; ++i)
-        {
-            if (node->labeled[i] != nullptr)
-            {
-                palindromes(s, node->labeled[i], result);
-            }
-        }
-    }
-
-    std::string palindromesAll(const std::string &s)
-    {   
-        std::string result = "";
-        palindromes(s, root1, result);
-        palindromes(s, root2, result);
-        return result;
     }
 };
 
 /* Main needs to be commented out to be able to run it from Main.hs */
 // int main(int argc, char *argv[])
 // {
-//     std::string s = argv[1];
-//     EERTREE tree;
-//     for (int i = 0; i < s.size(); ++i)
-//         tree.insert(s, i);
+//     if (argc == 2)
+//     {
+//         std::string s = argv[1];
 
-//     tree.printAll(s);
-//     // std::cout << tree.palindromesAll(s);
+//         std::cout << s << std::endl;
+
+//         EERTREE tree;
+//         for (int i = 0; i < s.size(); ++i)
+//             tree.insert(s, i);
+
+//         tree.printPalindromes(s);
+
+//         // std::string result;
+//         // tree.palindromes(s, result);
+//         // std::cout << result << std::endl;
+//     }
+//     else
+//     {
+//         std::cout << "No string has been passed." << std::endl;
+//     }
+
+//     return 0;
 // }

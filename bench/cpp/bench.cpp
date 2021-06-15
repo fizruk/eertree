@@ -1,6 +1,6 @@
 /*
-Google benchmark
-https://github.com/google/benchmark
+* Google benchmark
+* https://github.com/google/benchmark
 */
 #include <benchmark/benchmark.h>
 #include "eertree.cpp"
@@ -8,6 +8,9 @@ https://github.com/google/benchmark
 #include <iostream>
 #include <ctime>
 #include <unistd.h>
+
+#define BENCH_N 10000
+#define ITER_N 100
 
 static std::string randomString(const int len);
 static void palindromes();
@@ -18,11 +21,10 @@ static std::string randomString(const int len)
 
     std::string s;
 
-    static const std::string alpha2 = "ab";
-    static const std::string alpha4 = "abcd";
     static const std::string alphaFull = "abcdefghijklmnopqrstuvwxyz";
 
-    static const std::string alpha = alpha4;
+    // Select alphabet size here
+    static const std::string alpha = alphaFull.substr(0, 4);
 
     srand((unsigned)time(NULL) * getpid());
 
@@ -42,15 +44,15 @@ static void palindromes(const std::string s)
     for (int i = 0; i < s.size(); ++i)
         tree.insert(s, i);
 
-    std::string res = tree.palindromesAll(s);
+    std::string result;
+    tree.palindromes(s, result);
 }
 
 static void bench(benchmark::State &state)
 {
-    static const int LEN[5] = {10000, 20000, 40000, 80000, 160000};
+    int len = state.range(0);
 
-    // Change index for different lengths
-    std::string s = randomString(LEN[0]);
+    std::string s = randomString(len);
 
     for (auto _ : state)
     {
@@ -58,24 +60,33 @@ static void bench(benchmark::State &state)
     }
 }
 
-BENCHMARK(bench);
+BENCHMARK(bench)
+    // String lengths
+    ->Arg(BENCH_N)
+    ->Arg(2 * BENCH_N)
+    ->Arg(4 * BENCH_N)
+    ->Arg(8 * BENCH_N)
+    ->Arg(16 * BENCH_N)
+    ->Iterations(ITER_N)        // # of iterations
+    ->Unit(benchmark::kSecond); // time in seconds
 
 BENCHMARK_MAIN();
 
 /*
-Run benchmarks
+Run benchmarks:
 g++ bench.cpp -std=c++11 -isystem ../../../benchmark/include -Lbenchmark/build/src -lbenchmark -lpthread
+./a.out
 */
 
 // int main(int argc, char *argv[])
 // {
-//    int len = 10;
-// 
+//     int len = 10;
+
 //     std::string s = randomString(len);
-// 
+
 //     EERTREE tree;
 //     for (int i = 0; i < s.size(); ++i)
 //         tree.insert(s, i);
-//     
-//     std::cout << tree.palindromesAll(s) << std::endl;
+
+//     tree.printPalindromes(s);
 // }
