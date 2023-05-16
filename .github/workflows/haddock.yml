@@ -25,7 +25,7 @@ jobs:
         with:
           path: |
             .stack
-          key: ${{ runner.os }}-${{ hashFiles('stack.yaml.lock', 'banana.cabal') }}-stack
+          key: ${{ runner.os }}-${{ hashFiles('stack.yaml.lock', 'eertree.cabal') }}-stack
 
       - name: 🔨 Build Documentation
         run: |
