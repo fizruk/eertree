@@ -1,0 +1,221 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds                  #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DerivingStrategies         #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE GeneralizedNewtypeDeriving #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE KindSignatures             #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables        #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications           #-}</span><span>
+</span><span id="line-7"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">EERTREE.Symbol</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Data.Proxy</span></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">GHC.TypeLits</span></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">KnownNat</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">Nat</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">natVal</span></span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Control.DeepSeq</span></span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="hs-comment">-- $setup</span><span>
+</span><span id="line-14"></span><span class="hs-comment">-- &gt;&gt;&gt; :set -XTypeApplications -XDataKinds</span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span class="annot"><span class="hs-comment">-- | A symbol in an alphabet of size @n@.</span></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">newtype</span><span> </span><span id="Symbol"><span class="annot"><a href="EERTREE.Symbol.html#Symbol"><span class="hs-identifier hs-var">Symbol</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679067068"><span class="annot"><a href="#local-6989586621679067068"><span class="hs-identifier hs-type">n</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Nat</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Symbol"><span class="annot"><a href="EERTREE.Symbol.html#Symbol"><span class="hs-identifier hs-var">Symbol</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="fromSymbol"><span class="annot"><span class="annottext">forall (n :: Nat). Symbol n -&gt; Int
+</span><a href="EERTREE.Symbol.html#fromSymbol"><span class="hs-identifier hs-var hs-var">fromSymbol</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-18"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">newtype</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679067111"><span id="local-6989586621679067116"><span class="annot"><span class="annottext">Symbol n -&gt; Symbol n -&gt; Bool
+(Symbol n -&gt; Symbol n -&gt; Bool)
+-&gt; (Symbol n -&gt; Symbol n -&gt; Bool) -&gt; Eq (Symbol n)
+forall (n :: Nat). Symbol n -&gt; Symbol n -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: forall (n :: Nat). Symbol n -&gt; Symbol n -&gt; Bool
+== :: Symbol n -&gt; Symbol n -&gt; Bool
+$c/= :: forall (n :: Nat). Symbol n -&gt; Symbol n -&gt; Bool
+/= :: Symbol n -&gt; Symbol n -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679067124"><span id="local-6989586621679067129"><span id="local-6989586621679067133"><span id="local-6989586621679067137"><span id="local-6989586621679067141"><span id="local-6989586621679067145"><span id="local-6989586621679067149"><span class="annot"><span class="annottext">Eq (Symbol n)
+Eq (Symbol n)
+-&gt; (Symbol n -&gt; Symbol n -&gt; Ordering)
+-&gt; (Symbol n -&gt; Symbol n -&gt; Bool)
+-&gt; (Symbol n -&gt; Symbol n -&gt; Bool)
+-&gt; (Symbol n -&gt; Symbol n -&gt; Bool)
+-&gt; (Symbol n -&gt; Symbol n -&gt; Bool)
+-&gt; (Symbol n -&gt; Symbol n -&gt; Symbol n)
+-&gt; (Symbol n -&gt; Symbol n -&gt; Symbol n)
+-&gt; Ord (Symbol n)
+Symbol n -&gt; Symbol n -&gt; Bool
+Symbol n -&gt; Symbol n -&gt; Ordering
+Symbol n -&gt; Symbol n -&gt; Symbol n
+forall (n :: Nat). Eq (Symbol n)
+forall (n :: Nat). Symbol n -&gt; Symbol n -&gt; Bool
+forall (n :: Nat). Symbol n -&gt; Symbol n -&gt; Ordering
+forall (n :: Nat). Symbol n -&gt; Symbol n -&gt; Symbol n
+forall a.
+Eq a
+-&gt; (a -&gt; a -&gt; Ordering)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; Bool)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; (a -&gt; a -&gt; a)
+-&gt; Ord a
+$ccompare :: forall (n :: Nat). Symbol n -&gt; Symbol n -&gt; Ordering
+compare :: Symbol n -&gt; Symbol n -&gt; Ordering
+$c&lt; :: forall (n :: Nat). Symbol n -&gt; Symbol n -&gt; Bool
+&lt; :: Symbol n -&gt; Symbol n -&gt; Bool
+$c&lt;= :: forall (n :: Nat). Symbol n -&gt; Symbol n -&gt; Bool
+&lt;= :: Symbol n -&gt; Symbol n -&gt; Bool
+$c&gt; :: forall (n :: Nat). Symbol n -&gt; Symbol n -&gt; Bool
+&gt; :: Symbol n -&gt; Symbol n -&gt; Bool
+$c&gt;= :: forall (n :: Nat). Symbol n -&gt; Symbol n -&gt; Bool
+&gt;= :: Symbol n -&gt; Symbol n -&gt; Bool
+$cmax :: forall (n :: Nat). Symbol n -&gt; Symbol n -&gt; Symbol n
+max :: Symbol n -&gt; Symbol n -&gt; Symbol n
+$cmin :: forall (n :: Nat). Symbol n -&gt; Symbol n -&gt; Symbol n
+min :: Symbol n -&gt; Symbol n -&gt; Symbol n
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Ord</span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679067155"><span id="local-6989586621679067160"><span id="local-6989586621679067164"><span class="annot"><span class="annottext">Int -&gt; Symbol n -&gt; ShowS
+[Symbol n] -&gt; ShowS
+Symbol n -&gt; String
+(Int -&gt; Symbol n -&gt; ShowS)
+-&gt; (Symbol n -&gt; String) -&gt; ([Symbol n] -&gt; ShowS) -&gt; Show (Symbol n)
+forall (n :: Nat). Int -&gt; Symbol n -&gt; ShowS
+forall (n :: Nat). [Symbol n] -&gt; ShowS
+forall (n :: Nat). Symbol n -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: forall (n :: Nat). Int -&gt; Symbol n -&gt; ShowS
+showsPrec :: Int -&gt; Symbol n -&gt; ShowS
+$cshow :: forall (n :: Nat). Symbol n -&gt; String
+show :: Symbol n -&gt; String
+$cshowList :: forall (n :: Nat). [Symbol n] -&gt; ShowS
+showList :: [Symbol n] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679067170"><span id="local-6989586621679067175"><span id="local-6989586621679067179"><span id="local-6989586621679067183"><span id="local-6989586621679067187"><span id="local-6989586621679067191"><span id="local-6989586621679067195"><span id="local-6989586621679067199"><span class="annot"><span class="annottext">Int -&gt; Symbol n
+Symbol n -&gt; Int
+Symbol n -&gt; [Symbol n]
+Symbol n -&gt; Symbol n
+Symbol n -&gt; Symbol n -&gt; [Symbol n]
+Symbol n -&gt; Symbol n -&gt; Symbol n -&gt; [Symbol n]
+(Symbol n -&gt; Symbol n)
+-&gt; (Symbol n -&gt; Symbol n)
+-&gt; (Int -&gt; Symbol n)
+-&gt; (Symbol n -&gt; Int)
+-&gt; (Symbol n -&gt; [Symbol n])
+-&gt; (Symbol n -&gt; Symbol n -&gt; [Symbol n])
+-&gt; (Symbol n -&gt; Symbol n -&gt; [Symbol n])
+-&gt; (Symbol n -&gt; Symbol n -&gt; Symbol n -&gt; [Symbol n])
+-&gt; Enum (Symbol n)
+forall (n :: Nat). Int -&gt; Symbol n
+forall (n :: Nat). Symbol n -&gt; Int
+forall (n :: Nat). Symbol n -&gt; [Symbol n]
+forall (n :: Nat). Symbol n -&gt; Symbol n
+forall (n :: Nat). Symbol n -&gt; Symbol n -&gt; [Symbol n]
+forall (n :: Nat). Symbol n -&gt; Symbol n -&gt; Symbol n -&gt; [Symbol n]
+forall a.
+(a -&gt; a)
+-&gt; (a -&gt; a)
+-&gt; (Int -&gt; a)
+-&gt; (a -&gt; Int)
+-&gt; (a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; [a])
+-&gt; (a -&gt; a -&gt; a -&gt; [a])
+-&gt; Enum a
+$csucc :: forall (n :: Nat). Symbol n -&gt; Symbol n
+succ :: Symbol n -&gt; Symbol n
+$cpred :: forall (n :: Nat). Symbol n -&gt; Symbol n
+pred :: Symbol n -&gt; Symbol n
+$ctoEnum :: forall (n :: Nat). Int -&gt; Symbol n
+toEnum :: Int -&gt; Symbol n
+$cfromEnum :: forall (n :: Nat). Symbol n -&gt; Int
+fromEnum :: Symbol n -&gt; Int
+$cenumFrom :: forall (n :: Nat). Symbol n -&gt; [Symbol n]
+enumFrom :: Symbol n -&gt; [Symbol n]
+$cenumFromThen :: forall (n :: Nat). Symbol n -&gt; Symbol n -&gt; [Symbol n]
+enumFromThen :: Symbol n -&gt; Symbol n -&gt; [Symbol n]
+$cenumFromTo :: forall (n :: Nat). Symbol n -&gt; Symbol n -&gt; [Symbol n]
+enumFromTo :: Symbol n -&gt; Symbol n -&gt; [Symbol n]
+$cenumFromThenTo :: forall (n :: Nat). Symbol n -&gt; Symbol n -&gt; Symbol n -&gt; [Symbol n]
+enumFromThenTo :: Symbol n -&gt; Symbol n -&gt; Symbol n -&gt; [Symbol n]
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Enum</span></span></span></span></span></span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679067205"><span class="annot"><span class="annottext">Symbol n -&gt; ()
+(Symbol n -&gt; ()) -&gt; NFData (Symbol n)
+forall (n :: Nat). Symbol n -&gt; ()
+forall a. (a -&gt; ()) -&gt; NFData a
+$crnf :: forall (n :: Nat). Symbol n -&gt; ()
+rnf :: Symbol n -&gt; ()
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">NFData</span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679067090"><span class="annot"><span class="hs-identifier hs-type">KnownNat</span></span><span> </span><span class="annot"><a href="#local-6989586621679067090"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Bounded</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="EERTREE.Symbol.html#Symbol"><span class="hs-identifier hs-type">Symbol</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679067090"><span class="hs-identifier hs-type">n</span></a></span><span class="hs-special">)</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-21"></span><span>  </span><span id="local-6989586621679067216"><span class="annot"><span class="annottext">minBound :: Symbol n
+</span><a href="#local-6989586621679067216"><span class="hs-identifier hs-var hs-var hs-var hs-var">minBound</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Symbol n
+forall (n :: Nat). Int -&gt; Symbol n
+</span><a href="EERTREE.Symbol.html#Symbol"><span class="hs-identifier hs-var">Symbol</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-22"></span><span>  </span><span id="local-6989586621679067221"><span class="annot"><span class="annottext">maxBound :: Symbol n
+</span><a href="#local-6989586621679067221"><span class="hs-identifier hs-var hs-var hs-var hs-var">maxBound</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Symbol n
+forall (n :: Nat). Int -&gt; Symbol n
+</span><a href="EERTREE.Symbol.html#Symbol"><span class="hs-identifier hs-var">Symbol</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679067223"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-glyph hs-var">-</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span>    </span><span class="hs-keyword">where</span><span>
+</span><span id="line-24"></span><span>      </span><span id="local-6989586621679067223"><span class="annot"><span class="annottext">n :: Int
+</span><a href="#local-6989586621679067223"><span class="hs-identifier hs-var hs-var">n</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Int
+forall a. Num a =&gt; Integer -&gt; a
+</span><span class="hs-identifier hs-var">fromInteger</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Proxy n -&gt; Integer
+forall (n :: Nat) (proxy :: Nat -&gt; *).
+KnownNat n =&gt;
+proxy n -&gt; Integer
+</span><span class="hs-identifier hs-var">natVal</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall (t :: Nat). Proxy t
+forall {k} (t :: k). Proxy t
+</span><span class="hs-identifier hs-var">Proxy</span></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679067090"><span class="hs-identifier hs-type">n</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span>
+</span><span id="line-26"></span><span class="hs-comment">-- | This instance is used solely for convenience</span><span>
+</span><span id="line-27"></span><span class="hs-comment">-- of using integer literals for 'Symbol'.</span><span>
+</span><span id="line-28"></span><span class="hs-comment">-- None of the numeric operations are available except for 'fromInteger'.</span><span>
+</span><span id="line-29"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679067098"><span class="annot"><span class="hs-identifier hs-type">Num</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="EERTREE.Symbol.html#Symbol"><span class="hs-identifier hs-type">Symbol</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679067098"><span class="hs-identifier hs-type">n</span></a></span><span class="hs-special">)</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-30"></span><span>  </span><span id="local-6989586621679067237"><span class="annot"><span class="annottext">fromInteger :: Integer -&gt; Symbol n
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">fromInteger</span></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Symbol n
+forall (n :: Nat). Int -&gt; Symbol n
+</span><a href="EERTREE.Symbol.html#Symbol"><span class="hs-identifier hs-var">Symbol</span></a></span><span> </span><span class="annot"><span class="annottext">(Int -&gt; Symbol n) -&gt; (Integer -&gt; Int) -&gt; Integer -&gt; Symbol n
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Int
+forall a. Num a =&gt; Integer -&gt; a
+</span><span class="hs-identifier hs-var">fromInteger</span></span><span>
+</span><span id="line-31"></span><span>  </span><span id="local-6989586621679067241"><span class="annot"><span class="annottext">+ :: Symbol n -&gt; Symbol n -&gt; Symbol n
+</span><a href="#local-6989586621679067241"><span class="hs-operator hs-var hs-var hs-var hs-var">(+)</span></a></span></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Symbol n -&gt; Symbol n -&gt; Symbol n
+forall a. HasCallStack =&gt; String -&gt; a
+</span><span class="hs-identifier hs-var">error</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;operation + is not defined for Symbol&quot;</span></span><span>
+</span><span id="line-32"></span><span>  </span><span id="local-6989586621679067246"><span class="annot"><span class="annottext">* :: Symbol n -&gt; Symbol n -&gt; Symbol n
+</span><a href="#local-6989586621679067246"><span class="hs-operator hs-var hs-var hs-var hs-var">(*)</span></a></span></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Symbol n -&gt; Symbol n -&gt; Symbol n
+forall a. HasCallStack =&gt; String -&gt; a
+</span><span class="hs-identifier hs-var">error</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;operation * is not defined for Symbol&quot;</span></span><span>
+</span><span id="line-33"></span><span>  </span><span id="local-6989586621679067250"><span class="annot"><span class="annottext">abs :: Symbol n -&gt; Symbol n
+</span><a href="#local-6989586621679067250"><span class="hs-identifier hs-var hs-var hs-var hs-var">abs</span></a></span></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Symbol n -&gt; Symbol n
+forall a. HasCallStack =&gt; String -&gt; a
+</span><span class="hs-identifier hs-var">error</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;operation abs is not defined for Symbol&quot;</span></span><span>
+</span><span id="line-34"></span><span>  </span><span id="local-6989586621679067254"><span class="annot"><span class="annottext">signum :: Symbol n -&gt; Symbol n
+</span><a href="#local-6989586621679067254"><span class="hs-identifier hs-var hs-var hs-var hs-var">signum</span></a></span></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Symbol n -&gt; Symbol n
+forall a. HasCallStack =&gt; String -&gt; a
+</span><span class="hs-identifier hs-var">error</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;operation signum is not defined for Symbol&quot;</span></span><span>
+</span><span id="line-35"></span><span>  </span><span id="local-6989586621679067258"><span class="annot"><span class="annottext">negate :: Symbol n -&gt; Symbol n
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">negate</span></span></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Symbol n -&gt; Symbol n
+forall a. HasCallStack =&gt; String -&gt; a
+</span><span class="hs-identifier hs-var">error</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;operation negate is not defined for Symbol&quot;</span></span><span>
+</span><span id="line-36"></span><span>  </span><span id="local-6989586621679067261"><span class="hs-special">(</span><span class="hs-glyph">-</span><span class="hs-special">)</span></span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Symbol n -&gt; Symbol n -&gt; Symbol n
+forall a. HasCallStack =&gt; String -&gt; a
+</span><span class="hs-identifier hs-var">error</span></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;operation - is not defined for Symbol&quot;</span></span><span>
+</span><span id="line-37"></span><span>
+</span><span id="line-38"></span><span class="hs-comment">-- | Symbols of an alphabet of size @n@.</span><span>
+</span><span id="line-39"></span><span class="hs-comment">--</span><span>
+</span><span id="line-40"></span><span class="hs-comment">-- &gt;&gt;&gt; alphabet @2</span><span>
+</span><span id="line-41"></span><span class="hs-comment">-- [0,1]</span><span>
+</span><span id="line-42"></span><span class="hs-comment">-- &gt;&gt;&gt; alphabet @10</span><span>
+</span><span id="line-43"></span><span class="hs-comment">-- [0,1,2,3,4,5,6,7,8,9]</span><span>
+</span><span id="line-44"></span><span class="annot"><a href="EERTREE.Symbol.html#alphabet"><span class="hs-identifier hs-type">alphabet</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679067105"><span class="annot"><a href="#local-6989586621679067105"><span class="hs-identifier hs-type">n</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="annot"><span class="hs-identifier hs-type">KnownNat</span></span><span> </span><span class="annot"><a href="#local-6989586621679067105"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="EERTREE.Symbol.html#Symbol"><span class="hs-identifier hs-type">Symbol</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679067105"><span class="hs-identifier hs-type">n</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-45"></span><span id="alphabet"><span class="annot"><span class="annottext">alphabet :: forall (n :: Nat). KnownNat n =&gt; [Symbol n]
+</span><a href="EERTREE.Symbol.html#alphabet"><span class="hs-identifier hs-var hs-var">alphabet</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Symbol n
+forall a. Bounded a =&gt; a
+</span><span class="hs-identifier hs-var">minBound</span></span><span class="hs-glyph">..</span><span class="annot"><span class="annottext">Symbol n
+forall a. Bounded a =&gt; a
+</span><span class="hs-identifier hs-var">maxBound</span></span><span class="hs-special">]</span><span>
+</span><span id="line-46"></span></pre></body></html>

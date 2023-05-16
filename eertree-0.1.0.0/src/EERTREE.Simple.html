@@ -1,0 +1,1241 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds           #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE DeriveGeneric       #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE TypeApplications    #-}</span><span>
+</span><span id="line-5"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">EERTREE.Simple</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-6"></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Control.DeepSeq</span></span><span>             </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">NFData</span></span><span class="hs-special">)</span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Data.Char</span></span><span>                   </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">digitToInt</span></span><span class="hs-special">)</span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Foldable</span></span><span>               </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">F</span></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Data.List</span></span><span>                   </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">maximumBy</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier">nub</span></span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Data.Map</span></span><span>                    </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Map</span></span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Map</span></span><span>                    </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Data.Ord</span></span><span>                    </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">comparing</span></span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Data.Sequence</span></span><span>               </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Seq</span></span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Sequence</span></span><span>               </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Seq</span></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Data.String</span></span><span>                 </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">IsString</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">GHC.Generics</span></span><span>                </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Generic</span></span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">GHC.TypeLits</span></span><span>                </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">KnownNat</span></span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><span class="hs-identifier">Control.Monad.ST</span></span><span>            </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">runST</span></span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Vector.Unboxed</span></span><span>         </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">UVector</span></span><span>
+</span><span id="line-22"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><span class="hs-identifier">Data.Vector.Unboxed.Mutable</span></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">MVector</span></span><span>
+</span><span id="line-23"></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="EERTREE.Node.html"><span class="hs-identifier">EERTREE.Node</span></a></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">import</span><span>           </span><span class="annot"><a href="EERTREE.Symbol.html"><span class="hs-identifier">EERTREE.Symbol</span></a></span><span>
+</span><span id="line-26"></span><span>
+</span><span id="line-27"></span><span class="hs-comment">-- $setup</span><span>
+</span><span id="line-28"></span><span class="hs-comment">-- &gt;&gt;&gt; :set -XTypeApplications -XDataKinds -XOverloadedStrings</span><span>
+</span><span id="line-29"></span><span>
+</span><span id="line-30"></span><span class="annot"><span class="hs-comment">-- | A palindromic tree for some string with auxillary information.</span></span><span>
+</span><span id="line-31"></span><span class="hs-keyword">data</span><span> </span><span id="EERTREE"><span class="annot"><a href="EERTREE.Simple.html#EERTREE"><span class="hs-identifier hs-var">EERTREE</span></a></span></span><span> </span><span id="local-6989586621679067720"><span class="annot"><a href="#local-6989586621679067720"><span class="hs-identifier hs-type">n</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="EERTREE"><span class="annot"><a href="EERTREE.Simple.html#EERTREE"><span class="hs-identifier hs-var">EERTREE</span></a></span></span><span>
+</span><span id="line-32"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="strLen"><span class="annot"><span class="annottext">forall (n :: Nat). EERTREE n -&gt; Int
+</span><a href="EERTREE.Simple.html#strLen"><span class="hs-identifier hs-var hs-var">strLen</span></a></span></span><span>            </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span>           </span><span class="annot"><span class="hs-comment">-- ^ Length of the analysed string.</span></span><span>
+</span><span id="line-33"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="maxPrefix"><span class="annot"><span class="annottext">forall (n :: Nat). EERTREE n -&gt; Node n
+</span><a href="EERTREE.Simple.html#maxPrefix"><span class="hs-identifier hs-var hs-var">maxPrefix</span></a></span></span><span>         </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="EERTREE.Node.html#Node"><span class="hs-identifier hs-type">Node</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679067720"><span class="hs-identifier hs-type">n</span></a></span><span>         </span><span class="annot"><span class="hs-comment">-- ^ Maximum palindromic prefix.</span></span><span>
+</span><span id="line-34"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="maxSuffix"><span class="annot"><span class="annottext">forall (n :: Nat). EERTREE n -&gt; Node n
+</span><a href="EERTREE.Simple.html#maxSuffix"><span class="hs-identifier hs-var hs-var">maxSuffix</span></a></span></span><span>         </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="EERTREE.Node.html#Node"><span class="hs-identifier hs-type">Node</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679067720"><span class="hs-identifier hs-type">n</span></a></span><span>         </span><span class="annot"><span class="hs-comment">-- ^ Maximum palindromic suffix</span></span><span>
+</span><span id="line-35"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="strReversedPrefix"><span class="annot"><span class="annottext">forall (n :: Nat). EERTREE n -&gt; Seq (Symbol n)
+</span><a href="EERTREE.Simple.html#strReversedPrefix"><span class="hs-identifier hs-var hs-var">strReversedPrefix</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Seq</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="EERTREE.Symbol.html#Symbol"><span class="hs-identifier hs-type">Symbol</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679067720"><span class="hs-identifier hs-type">n</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="hs-comment">-- ^ Prefix, preceding maximum palindromic suffix</span></span><span>
+</span><span id="line-36"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="strSuffix"><span class="annot"><span class="annottext">forall (n :: Nat). EERTREE n -&gt; Seq (Symbol n)
+</span><a href="EERTREE.Simple.html#strSuffix"><span class="hs-identifier hs-var hs-var">strSuffix</span></a></span></span><span>         </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Seq</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="EERTREE.Symbol.html#Symbol"><span class="hs-identifier hs-type">Symbol</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679067720"><span class="hs-identifier hs-type">n</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="hs-comment">-- ^ Suffix, following maximum palindromic prefix.</span></span><span>
+</span><span id="line-37"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="palindromes"><span class="annot"><span class="annottext">forall (n :: Nat). EERTREE n -&gt; [Node n]
+</span><a href="EERTREE.Simple.html#palindromes"><span class="hs-identifier hs-var hs-var">palindromes</span></a></span></span><span>       </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="EERTREE.Node.html#Node"><span class="hs-identifier hs-type">Node</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679067720"><span class="hs-identifier hs-type">n</span></a></span><span class="hs-special">]</span><span>       </span><span class="annot"><span class="hs-comment">-- ^ Accumulated list of encountered palindromes.</span></span><span>
+</span><span id="line-38"></span><span>  </span><span class="hs-special">}</span><span> </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679067924"><span id="local-6989586621679067937"><span class="annot"><span class="annottext">EERTREE n -&gt; EERTREE n -&gt; Bool
+(EERTREE n -&gt; EERTREE n -&gt; Bool)
+-&gt; (EERTREE n -&gt; EERTREE n -&gt; Bool) -&gt; Eq (EERTREE n)
+forall (n :: Nat). EERTREE n -&gt; EERTREE n -&gt; Bool
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: forall (n :: Nat). EERTREE n -&gt; EERTREE n -&gt; Bool
+== :: EERTREE n -&gt; EERTREE n -&gt; Bool
+$c/= :: forall (n :: Nat). EERTREE n -&gt; EERTREE n -&gt; Bool
+/= :: EERTREE n -&gt; EERTREE n -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679067943"><span id="local-6989586621679067958"><span id="local-6989586621679067962"><span class="annot"><span class="annottext">Int -&gt; EERTREE n -&gt; ShowS
+[EERTREE n] -&gt; ShowS
+EERTREE n -&gt; String
+(Int -&gt; EERTREE n -&gt; ShowS)
+-&gt; (EERTREE n -&gt; String)
+-&gt; ([EERTREE n] -&gt; ShowS)
+-&gt; Show (EERTREE n)
+forall (n :: Nat). Int -&gt; EERTREE n -&gt; ShowS
+forall (n :: Nat). [EERTREE n] -&gt; ShowS
+forall (n :: Nat). EERTREE n -&gt; String
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: forall (n :: Nat). Int -&gt; EERTREE n -&gt; ShowS
+showsPrec :: Int -&gt; EERTREE n -&gt; ShowS
+$cshow :: forall (n :: Nat). EERTREE n -&gt; String
+show :: EERTREE n -&gt; String
+$cshowList :: forall (n :: Nat). [EERTREE n] -&gt; ShowS
+showList :: [EERTREE n] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679067967"><span id="local-6989586621679067969"><span class="annot"><span class="annottext">(forall x. EERTREE n -&gt; Rep (EERTREE n) x)
+-&gt; (forall x. Rep (EERTREE n) x -&gt; EERTREE n)
+-&gt; Generic (EERTREE n)
+forall (n :: Nat) x. Rep (EERTREE n) x -&gt; EERTREE n
+forall (n :: Nat) x. EERTREE n -&gt; Rep (EERTREE n) x
+forall x. Rep (EERTREE n) x -&gt; EERTREE n
+forall x. EERTREE n -&gt; Rep (EERTREE n) x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall (n :: Nat) x. EERTREE n -&gt; Rep (EERTREE n) x
+from :: forall x. EERTREE n -&gt; Rep (EERTREE n) x
+$cto :: forall (n :: Nat) x. Rep (EERTREE n) x -&gt; EERTREE n
+to :: forall x. Rep (EERTREE n) x -&gt; EERTREE n
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679067771"><span id="local-6989586621679067973"><span class="annot"><span class="hs-identifier hs-type">NFData</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="EERTREE.Simple.html#EERTREE"><span class="hs-identifier hs-type">EERTREE</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679067771"><span class="hs-identifier hs-type">n</span></a></span><span class="hs-special">)</span></span></span><span>
+</span><span id="line-40"></span><span>
+</span><span id="line-41"></span><span class="hs-keyword">instance</span><span> </span><span id="local-6989586621679067774"><span class="annot"><span class="hs-identifier hs-type">KnownNat</span></span><span> </span><span class="annot"><a href="#local-6989586621679067774"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IsString</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="EERTREE.Simple.html#EERTREE"><span class="hs-identifier hs-type">EERTREE</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679067774"><span class="hs-identifier hs-type">n</span></a></span><span class="hs-special">)</span></span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-42"></span><span>  </span><span id="local-6989586621679068014"><span class="annot"><span class="annottext">fromString :: String -&gt; EERTREE n
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var">fromString</span></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; EERTREE n
+forall (n :: Nat). KnownNat n =&gt; String -&gt; EERTREE n
+</span><a href="EERTREE.Simple.html#eertreeFromString"><span class="hs-identifier hs-var">eertreeFromString</span></a></span><span>
+</span><span id="line-43"></span><span>
+</span><span id="line-44"></span><span class="annot"><span class="hs-comment">-- | An empty eertree.</span></span><span>
+</span><span id="line-45"></span><span class="annot"><a href="EERTREE.Simple.html#empty"><span class="hs-identifier hs-type">empty</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679067775"><span class="annot"><a href="#local-6989586621679067775"><span class="hs-identifier hs-type">n</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="annot"><span class="hs-identifier hs-type">KnownNat</span></span><span> </span><span class="annot"><a href="#local-6989586621679067775"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="EERTREE.Simple.html#EERTREE"><span class="hs-identifier hs-type">EERTREE</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679067775"><span class="hs-identifier hs-type">n</span></a></span><span>
+</span><span id="line-46"></span><span id="empty"><span class="annot"><span class="annottext">empty :: forall (n :: Nat). KnownNat n =&gt; EERTREE n
+</span><a href="EERTREE.Simple.html#empty"><span class="hs-identifier hs-var hs-var">empty</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="EERTREE.Simple.html#EERTREE"><span class="hs-identifier hs-type">EERTREE</span></a></span><span>
+</span><span id="line-47"></span><span>  </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">strLen :: Int
+</span><a href="EERTREE.Simple.html#strLen"><span class="hs-identifier hs-var">strLen</span></a></span><span>             </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-48"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">maxPrefix :: Node n
+</span><a href="EERTREE.Simple.html#maxPrefix"><span class="hs-identifier hs-var">maxPrefix</span></a></span><span>          </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall (n :: Nat). KnownNat n =&gt; Node n
+</span><a href="EERTREE.Node.html#evenNode"><span class="hs-identifier hs-var">evenNode</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679067775"><span class="hs-identifier hs-type">n</span></a></span><span>
+</span><span id="line-49"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">maxSuffix :: Node n
+</span><a href="EERTREE.Simple.html#maxSuffix"><span class="hs-identifier hs-var">maxSuffix</span></a></span><span>          </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall (n :: Nat). KnownNat n =&gt; Node n
+</span><a href="EERTREE.Node.html#evenNode"><span class="hs-identifier hs-var">evenNode</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679067775"><span class="hs-identifier hs-type">n</span></a></span><span>
+</span><span id="line-50"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">strReversedPrefix :: Seq (Symbol n)
+</span><a href="EERTREE.Simple.html#strReversedPrefix"><span class="hs-identifier hs-var">strReversedPrefix</span></a></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Seq (Symbol n)
+forall a. Seq a
+</span><span class="hs-identifier hs-var">Seq.empty</span></span><span>
+</span><span id="line-51"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">strSuffix :: Seq (Symbol n)
+</span><a href="EERTREE.Simple.html#strSuffix"><span class="hs-identifier hs-var">strSuffix</span></a></span><span>          </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Seq (Symbol n)
+forall a. Seq a
+</span><span class="hs-identifier hs-var">Seq.empty</span></span><span>
+</span><span id="line-52"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">palindromes :: [Node n]
+</span><a href="EERTREE.Simple.html#palindromes"><span class="hs-identifier hs-var">palindromes</span></a></span><span>        </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-53"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-54"></span><span>
+</span><span id="line-55"></span><span class="hs-comment">-- | An eertree for a singleton string.</span><span>
+</span><span id="line-56"></span><span class="hs-comment">--</span><span>
+</span><span id="line-57"></span><span class="hs-comment">-- &gt;&gt;&gt; fromEERTREE (singleton @2 0)</span><span>
+</span><span id="line-58"></span><span class="hs-comment">-- [0]</span><span>
+</span><span id="line-59"></span><span id="local-6989586621679067780"><span class="annot"><a href="EERTREE.Simple.html#singleton"><span class="hs-identifier hs-type">singleton</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">KnownNat</span></span><span> </span><span class="annot"><a href="#local-6989586621679067780"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="EERTREE.Symbol.html#Symbol"><span class="hs-identifier hs-type">Symbol</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679067780"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="EERTREE.Simple.html#EERTREE"><span class="hs-identifier hs-type">EERTREE</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679067780"><span class="hs-identifier hs-type">n</span></a></span></span><span>
+</span><span id="line-60"></span><span id="singleton"><span class="annot"><span class="annottext">singleton :: forall (n :: Nat). KnownNat n =&gt; Symbol n -&gt; EERTREE n
+</span><a href="EERTREE.Simple.html#singleton"><span class="hs-identifier hs-var hs-var">singleton</span></a></span></span><span> </span><span id="local-6989586621679068026"><span class="annot"><span class="annottext">Symbol n
+</span><a href="#local-6989586621679068026"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Symbol n -&gt; EERTREE n -&gt; EERTREE n
+forall (n :: Nat). KnownNat n =&gt; Symbol n -&gt; EERTREE n -&gt; EERTREE n
+</span><a href="EERTREE.Simple.html#prepend"><span class="hs-identifier hs-var">prepend</span></a></span><span> </span><span class="annot"><span class="annottext">Symbol n
+</span><a href="#local-6989586621679068026"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">EERTREE n
+forall (n :: Nat). KnownNat n =&gt; EERTREE n
+</span><a href="EERTREE.Simple.html#empty"><span class="hs-identifier hs-var">empty</span></a></span><span>
+</span><span id="line-61"></span><span>
+</span><span id="line-62"></span><span class="hs-comment">-- | Analyse a string by building an eertree.</span><span>
+</span><span id="line-63"></span><span class="hs-comment">--</span><span>
+</span><span id="line-64"></span><span class="hs-comment">-- &gt;&gt;&gt; fromEERTREE (eertree @2 [0,1,0,0,1])</span><span>
+</span><span id="line-65"></span><span class="hs-comment">-- [0,1,0,0,1]</span><span>
+</span><span id="line-66"></span><span id="local-6989586621679067783"><span class="annot"><a href="EERTREE.Simple.html#eertree"><span class="hs-identifier hs-type">eertree</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">KnownNat</span></span><span> </span><span class="annot"><a href="#local-6989586621679067783"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="EERTREE.Symbol.html#Symbol"><span class="hs-identifier hs-type">Symbol</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679067783"><span class="hs-identifier hs-type">n</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="EERTREE.Simple.html#EERTREE"><span class="hs-identifier hs-type">EERTREE</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679067783"><span class="hs-identifier hs-type">n</span></a></span></span><span>
+</span><span id="line-67"></span><span id="eertree"><span class="annot"><span class="annottext">eertree :: forall (n :: Nat). KnownNat n =&gt; [Symbol n] -&gt; EERTREE n
+</span><a href="EERTREE.Simple.html#eertree"><span class="hs-identifier hs-var hs-var">eertree</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Symbol n -&gt; EERTREE n -&gt; EERTREE n)
+-&gt; EERTREE n -&gt; [Symbol n] -&gt; EERTREE n
+forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; [a] -&gt; b
+forall (t :: * -&gt; *) a b.
+Foldable t =&gt;
+(a -&gt; b -&gt; b) -&gt; b -&gt; t a -&gt; b
+</span><span class="hs-identifier hs-var">foldr</span></span><span> </span><span class="annot"><span class="annottext">Symbol n -&gt; EERTREE n -&gt; EERTREE n
+forall (n :: Nat). KnownNat n =&gt; Symbol n -&gt; EERTREE n -&gt; EERTREE n
+</span><a href="EERTREE.Simple.html#prepend"><span class="hs-identifier hs-var">prepend</span></a></span><span> </span><span class="annot"><span class="annottext">EERTREE n
+forall (n :: Nat). KnownNat n =&gt; EERTREE n
+</span><a href="EERTREE.Simple.html#empty"><span class="hs-identifier hs-var">empty</span></a></span><span>
+</span><span id="line-68"></span><span>
+</span><span id="line-69"></span><span class="hs-comment">-- | Build an eertree from string</span><span>
+</span><span id="line-70"></span><span class="hs-comment">--</span><span>
+</span><span id="line-71"></span><span class="hs-comment">-- &gt;&gt;&gt; eertreeFromString @2 &quot;01001&quot; == eertree @2 [0,1,0,0,1]</span><span>
+</span><span id="line-72"></span><span class="hs-comment">-- True</span><span>
+</span><span id="line-73"></span><span id="local-6989586621679068035"><span class="annot"><a href="EERTREE.Simple.html#eertreeFromString"><span class="hs-identifier hs-type">eertreeFromString</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">KnownNat</span></span><span> </span><span class="annot"><a href="#local-6989586621679068035"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="EERTREE.Simple.html#EERTREE"><span class="hs-identifier hs-type">EERTREE</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679068035"><span class="hs-identifier hs-type">n</span></a></span></span><span>
+</span><span id="line-74"></span><span id="eertreeFromString"><span class="annot"><span class="annottext">eertreeFromString :: forall (n :: Nat). KnownNat n =&gt; String -&gt; EERTREE n
+</span><a href="EERTREE.Simple.html#eertreeFromString"><span class="hs-identifier hs-var hs-var">eertreeFromString</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Char -&gt; EERTREE n -&gt; EERTREE n)
+-&gt; EERTREE n -&gt; String -&gt; EERTREE n
+forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; [a] -&gt; b
+forall (t :: * -&gt; *) a b.
+Foldable t =&gt;
+(a -&gt; b -&gt; b) -&gt; b -&gt; t a -&gt; b
+</span><span class="hs-identifier hs-var">foldr</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Symbol n -&gt; EERTREE n -&gt; EERTREE n
+forall (n :: Nat). KnownNat n =&gt; Symbol n -&gt; EERTREE n -&gt; EERTREE n
+</span><a href="EERTREE.Simple.html#prepend"><span class="hs-identifier hs-var">prepend</span></a></span><span> </span><span class="annot"><span class="annottext">(Symbol n -&gt; EERTREE n -&gt; EERTREE n)
+-&gt; (Char -&gt; Symbol n) -&gt; Char -&gt; EERTREE n -&gt; EERTREE n
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Symbol n
+forall (n :: Nat). Int -&gt; Symbol n
+</span><a href="EERTREE.Symbol.html#Symbol"><span class="hs-identifier hs-var">Symbol</span></a></span><span> </span><span class="annot"><span class="annottext">(Int -&gt; Symbol n) -&gt; (Char -&gt; Int) -&gt; Char -&gt; Symbol n
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Char -&gt; Int
+</span><span class="hs-identifier hs-var">digitToInt</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">EERTREE n
+forall (n :: Nat). KnownNat n =&gt; EERTREE n
+</span><a href="EERTREE.Simple.html#empty"><span class="hs-identifier hs-var">empty</span></a></span><span>
+</span><span id="line-75"></span><span>
+</span><span id="line-76"></span><span class="hs-comment">-- | EERTREE of a reversed string</span><span>
+</span><span id="line-77"></span><span class="hs-comment">--</span><span>
+</span><span id="line-78"></span><span class="hs-comment">-- &gt;&gt; reverseEERTREE @2 &quot;01001&quot; == [1,0,0,1,0]</span><span>
+</span><span id="line-79"></span><span class="hs-comment">-- True</span><span>
+</span><span id="line-80"></span><span id="local-6989586621679067793"><span class="annot"><a href="EERTREE.Simple.html#reverseEERTREE"><span class="hs-identifier hs-type">reverseEERTREE</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">KnownNat</span></span><span> </span><span class="annot"><a href="#local-6989586621679067793"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="EERTREE.Simple.html#EERTREE"><span class="hs-identifier hs-type">EERTREE</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679067793"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="EERTREE.Simple.html#EERTREE"><span class="hs-identifier hs-type">EERTREE</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679067793"><span class="hs-identifier hs-type">n</span></a></span></span><span>
+</span><span id="line-81"></span><span id="reverseEERTREE"><span class="annot"><span class="annottext">reverseEERTREE :: forall (n :: Nat). KnownNat n =&gt; EERTREE n -&gt; EERTREE n
+</span><a href="EERTREE.Simple.html#reverseEERTREE"><span class="hs-identifier hs-var hs-var">reverseEERTREE</span></a></span></span><span> </span><span id="local-6989586621679068044"><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068044"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068044"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">maxPrefix :: Node n
+</span><a href="EERTREE.Simple.html#maxPrefix"><span class="hs-identifier hs-var">maxPrefix</span></a></span><span>          </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">EERTREE n -&gt; Node n
+forall (n :: Nat). EERTREE n -&gt; Node n
+</span><a href="EERTREE.Simple.html#maxSuffix"><span class="hs-identifier hs-var">maxSuffix</span></a></span><span> </span><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068044"><span class="hs-identifier hs-var">t</span></a></span><span>
+</span><span id="line-82"></span><span>                     </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">maxSuffix :: Node n
+</span><a href="EERTREE.Simple.html#maxSuffix"><span class="hs-identifier hs-var">maxSuffix</span></a></span><span>          </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">EERTREE n -&gt; Node n
+forall (n :: Nat). EERTREE n -&gt; Node n
+</span><a href="EERTREE.Simple.html#maxPrefix"><span class="hs-identifier hs-var">maxPrefix</span></a></span><span> </span><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068044"><span class="hs-identifier hs-var">t</span></a></span><span>
+</span><span id="line-83"></span><span>                     </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">strReversedPrefix :: Seq (Symbol n)
+</span><a href="EERTREE.Simple.html#strReversedPrefix"><span class="hs-identifier hs-var">strReversedPrefix</span></a></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">EERTREE n -&gt; Seq (Symbol n)
+forall (n :: Nat). EERTREE n -&gt; Seq (Symbol n)
+</span><a href="EERTREE.Simple.html#strSuffix"><span class="hs-identifier hs-var">strSuffix</span></a></span><span> </span><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068044"><span class="hs-identifier hs-var">t</span></a></span><span>
+</span><span id="line-84"></span><span>                     </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">strSuffix :: Seq (Symbol n)
+</span><a href="EERTREE.Simple.html#strSuffix"><span class="hs-identifier hs-var">strSuffix</span></a></span><span>          </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">EERTREE n -&gt; Seq (Symbol n)
+forall (n :: Nat). EERTREE n -&gt; Seq (Symbol n)
+</span><a href="EERTREE.Simple.html#strReversedPrefix"><span class="hs-identifier hs-var">strReversedPrefix</span></a></span><span> </span><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068044"><span class="hs-identifier hs-var">t</span></a></span><span>
+</span><span id="line-85"></span><span>                     </span><span class="hs-special">}</span><span>
+</span><span id="line-86"></span><span>
+</span><span id="line-87"></span><span class="hs-comment">-- | Get the string back from an eertree.</span><span>
+</span><span id="line-88"></span><span class="hs-comment">--</span><span>
+</span><span id="line-89"></span><span class="hs-comment">-- &gt;&gt;&gt; fromEERTREE @2 &quot;01001&quot;</span><span>
+</span><span id="line-90"></span><span class="hs-comment">-- [0,1,0,0,1]</span><span>
+</span><span id="line-91"></span><span id="local-6989586621679067795"><span class="annot"><a href="EERTREE.Simple.html#fromEERTREE"><span class="hs-identifier hs-type">fromEERTREE</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="EERTREE.Simple.html#EERTREE"><span class="hs-identifier hs-type">EERTREE</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679067795"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="EERTREE.Symbol.html#Symbol"><span class="hs-identifier hs-type">Symbol</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679067795"><span class="hs-identifier hs-type">n</span></a></span><span class="hs-special">]</span></span><span>
+</span><span id="line-92"></span><span id="fromEERTREE"><span class="annot"><span class="annottext">fromEERTREE :: forall (n :: Nat). EERTREE n -&gt; [Symbol n]
+</span><a href="EERTREE.Simple.html#fromEERTREE"><span class="hs-identifier hs-var hs-var">fromEERTREE</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Seq (Symbol n) -&gt; [Symbol n]
+forall a. Seq a -&gt; [a]
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; [a]
+</span><span class="hs-identifier hs-var">F.toList</span></span><span> </span><span class="annot"><span class="annottext">(Seq (Symbol n) -&gt; [Symbol n])
+-&gt; (EERTREE n -&gt; Seq (Symbol n)) -&gt; EERTREE n -&gt; [Symbol n]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">EERTREE n -&gt; Seq (Symbol n)
+forall (n :: Nat). EERTREE n -&gt; Seq (Symbol n)
+</span><a href="EERTREE.Simple.html#eertreeToSeq"><span class="hs-identifier hs-var">eertreeToSeq</span></a></span><span>
+</span><span id="line-93"></span><span>
+</span><span id="line-94"></span><span id="local-6989586621679068050"><span class="annot"><a href="EERTREE.Simple.html#eertreeToSeq"><span class="hs-identifier hs-type">eertreeToSeq</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="EERTREE.Simple.html#EERTREE"><span class="hs-identifier hs-type">EERTREE</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679068050"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Seq</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="EERTREE.Symbol.html#Symbol"><span class="hs-identifier hs-type">Symbol</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679068050"><span class="hs-identifier hs-type">n</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-95"></span><span id="eertreeToSeq"><span class="annot"><span class="annottext">eertreeToSeq :: forall (n :: Nat). EERTREE n -&gt; Seq (Symbol n)
+</span><a href="EERTREE.Simple.html#eertreeToSeq"><span class="hs-identifier hs-var hs-var">eertreeToSeq</span></a></span></span><span> </span><span id="local-6989586621679068053"><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068053"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Node n -&gt; Seq (Symbol n)
+forall (n :: Nat). Node n -&gt; Seq (Symbol n)
+</span><a href="EERTREE.Node.html#value"><span class="hs-identifier hs-var">value</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">EERTREE n -&gt; Node n
+forall (n :: Nat). EERTREE n -&gt; Node n
+</span><a href="EERTREE.Simple.html#maxPrefix"><span class="hs-identifier hs-var">maxPrefix</span></a></span><span> </span><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068053"><span class="hs-identifier hs-var">t</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Seq (Symbol n) -&gt; Seq (Symbol n) -&gt; Seq (Symbol n)
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">EERTREE n -&gt; Seq (Symbol n)
+forall (n :: Nat). EERTREE n -&gt; Seq (Symbol n)
+</span><a href="EERTREE.Simple.html#strSuffix"><span class="hs-identifier hs-var">strSuffix</span></a></span><span> </span><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068053"><span class="hs-identifier hs-var">t</span></a></span><span>
+</span><span id="line-96"></span><span>
+</span><span id="line-97"></span><span class="hs-comment">-- | Get the reversed string from an eertree</span><span>
+</span><span id="line-98"></span><span class="hs-comment">--</span><span>
+</span><span id="line-99"></span><span class="hs-comment">-- &gt;&gt;&gt; reverseFromEERTREE @2 &quot;01001&quot;</span><span>
+</span><span id="line-100"></span><span class="hs-comment">-- [1,0,0,1,0]</span><span>
+</span><span id="line-101"></span><span id="local-6989586621679068055"><span class="annot"><a href="EERTREE.Simple.html#reverseFromEERTREE"><span class="hs-identifier hs-type">reverseFromEERTREE</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="EERTREE.Simple.html#EERTREE"><span class="hs-identifier hs-type">EERTREE</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679068055"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="EERTREE.Symbol.html#Symbol"><span class="hs-identifier hs-type">Symbol</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679068055"><span class="hs-identifier hs-type">n</span></a></span><span class="hs-special">]</span></span><span>
+</span><span id="line-102"></span><span id="reverseFromEERTREE"><span class="annot"><span class="annottext">reverseFromEERTREE :: forall (n :: Nat). EERTREE n -&gt; [Symbol n]
+</span><a href="EERTREE.Simple.html#reverseFromEERTREE"><span class="hs-identifier hs-var hs-var">reverseFromEERTREE</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Seq (Symbol n) -&gt; [Symbol n]
+forall a. Seq a -&gt; [a]
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; [a]
+</span><span class="hs-identifier hs-var">F.toList</span></span><span> </span><span class="annot"><span class="annottext">(Seq (Symbol n) -&gt; [Symbol n])
+-&gt; (EERTREE n -&gt; Seq (Symbol n)) -&gt; EERTREE n -&gt; [Symbol n]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">EERTREE n -&gt; Seq (Symbol n)
+forall (n :: Nat). EERTREE n -&gt; Seq (Symbol n)
+</span><a href="EERTREE.Simple.html#eertreeToSeqReversed"><span class="hs-identifier hs-var">eertreeToSeqReversed</span></a></span><span>
+</span><span id="line-103"></span><span>
+</span><span id="line-104"></span><span id="local-6989586621679068059"><span class="annot"><a href="EERTREE.Simple.html#eertreeToSeqReversed"><span class="hs-identifier hs-type">eertreeToSeqReversed</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="EERTREE.Simple.html#EERTREE"><span class="hs-identifier hs-type">EERTREE</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679068059"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Seq</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="EERTREE.Symbol.html#Symbol"><span class="hs-identifier hs-type">Symbol</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679068059"><span class="hs-identifier hs-type">n</span></a></span><span class="hs-special">)</span></span><span>
+</span><span id="line-105"></span><span id="eertreeToSeqReversed"><span class="annot"><span class="annottext">eertreeToSeqReversed :: forall (n :: Nat). EERTREE n -&gt; Seq (Symbol n)
+</span><a href="EERTREE.Simple.html#eertreeToSeqReversed"><span class="hs-identifier hs-var hs-var">eertreeToSeqReversed</span></a></span></span><span> </span><span id="local-6989586621679068061"><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068061"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Node n -&gt; Seq (Symbol n)
+forall (n :: Nat). Node n -&gt; Seq (Symbol n)
+</span><a href="EERTREE.Node.html#value"><span class="hs-identifier hs-var">value</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">EERTREE n -&gt; Node n
+forall (n :: Nat). EERTREE n -&gt; Node n
+</span><a href="EERTREE.Simple.html#maxSuffix"><span class="hs-identifier hs-var">maxSuffix</span></a></span><span> </span><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068061"><span class="hs-identifier hs-var">t</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Seq (Symbol n) -&gt; Seq (Symbol n) -&gt; Seq (Symbol n)
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">EERTREE n -&gt; Seq (Symbol n)
+forall (n :: Nat). EERTREE n -&gt; Seq (Symbol n)
+</span><a href="EERTREE.Simple.html#strReversedPrefix"><span class="hs-identifier hs-var">strReversedPrefix</span></a></span><span> </span><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068061"><span class="hs-identifier hs-var">t</span></a></span><span>
+</span><span id="line-106"></span><span>
+</span><span id="line-107"></span><span class="hs-comment">-- | Add a symbol to the beginning of a string</span><span>
+</span><span id="line-108"></span><span class="hs-comment">-- corresponding to an eertree.</span><span>
+</span><span id="line-109"></span><span class="hs-comment">--</span><span>
+</span><span id="line-110"></span><span class="hs-comment">-- &gt;&gt;&gt; fromEERTREE (prepend 0 (eertreeFromString @2 &quot;01001&quot;))</span><span>
+</span><span id="line-111"></span><span class="hs-comment">-- [0,0,1,0,0,1]</span><span>
+</span><span id="line-112"></span><span id="local-6989586621679067782"><span class="annot"><a href="EERTREE.Simple.html#prepend"><span class="hs-identifier hs-type">prepend</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">KnownNat</span></span><span> </span><span class="annot"><a href="#local-6989586621679067782"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="EERTREE.Symbol.html#Symbol"><span class="hs-identifier hs-type">Symbol</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679067782"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="EERTREE.Simple.html#EERTREE"><span class="hs-identifier hs-type">EERTREE</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679067782"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="EERTREE.Simple.html#EERTREE"><span class="hs-identifier hs-type">EERTREE</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679067782"><span class="hs-identifier hs-type">n</span></a></span></span><span>
+</span><span id="line-113"></span><span id="prepend"><span class="annot"><span class="annottext">prepend :: forall (n :: Nat). KnownNat n =&gt; Symbol n -&gt; EERTREE n -&gt; EERTREE n
+</span><a href="EERTREE.Simple.html#prepend"><span class="hs-identifier hs-var hs-var">prepend</span></a></span></span><span> </span><span id="local-6989586621679068073"><span class="annot"><span class="annottext">Symbol n
+</span><a href="#local-6989586621679068073"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span id="local-6989586621679068074"><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068074"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-114"></span><span>  </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Seq (Symbol n) -&gt; ViewL (Symbol n)
+forall a. Seq a -&gt; ViewL a
+</span><span class="hs-identifier hs-var">Seq.viewl</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">EERTREE n -&gt; Seq (Symbol n)
+forall (n :: Nat). EERTREE n -&gt; Seq (Symbol n)
+</span><a href="EERTREE.Simple.html#strSuffix"><span class="hs-identifier hs-var">strSuffix</span></a></span><span> </span><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068074"><span class="hs-identifier hs-var">t</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-115"></span><span>    </span><span id="local-6989586621679068076"><span class="annot"><span class="annottext">Symbol n
+</span><a href="#local-6989586621679068076"><span class="hs-identifier hs-var">c'</span></a></span></span><span> </span><span class="annot"><span class="hs-operator hs-type">Seq.:&lt;</span></span><span> </span><span id="local-6989586621679068078"><span class="annot"><span class="annottext">Seq (Symbol n)
+</span><a href="#local-6989586621679068078"><span class="hs-identifier hs-var">cs</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Symbol n
+</span><a href="#local-6989586621679068073"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Symbol n -&gt; Symbol n -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">Symbol n
+</span><a href="#local-6989586621679068076"><span class="hs-identifier hs-var">c'</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="EERTREE.Simple.html#EERTREE"><span class="hs-identifier hs-type">EERTREE</span></a></span><span>
+</span><span id="line-116"></span><span>      </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">strLen :: Int
+</span><a href="EERTREE.Simple.html#strLen"><span class="hs-identifier hs-var">strLen</span></a></span><span>             </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">EERTREE n -&gt; Int
+forall (n :: Nat). EERTREE n -&gt; Int
+</span><a href="EERTREE.Simple.html#strLen"><span class="hs-identifier hs-var">strLen</span></a></span><span> </span><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068074"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">+</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-117"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">maxPrefix :: Node n
+</span><a href="EERTREE.Simple.html#maxPrefix"><span class="hs-identifier hs-var">maxPrefix</span></a></span><span>          </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Node n
+</span><a href="#local-6989586621679068080"><span class="hs-identifier hs-var">newMaxPrefix</span></a></span><span>
+</span><span id="line-118"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">maxSuffix :: Node n
+</span><a href="EERTREE.Simple.html#maxSuffix"><span class="hs-identifier hs-var">maxSuffix</span></a></span><span>          </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Seq (Symbol n) -&gt; Bool
+forall a. Seq a -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Bool
+</span><span class="hs-identifier hs-var">null</span></span><span> </span><span class="annot"><span class="annottext">Seq (Symbol n)
+</span><a href="#local-6989586621679068078"><span class="hs-identifier hs-var">cs</span></a></span><span> </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">Node n
+</span><a href="#local-6989586621679068080"><span class="hs-identifier hs-var">newMaxPrefix</span></a></span><span> </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">EERTREE n -&gt; Node n
+forall (n :: Nat). EERTREE n -&gt; Node n
+</span><a href="EERTREE.Simple.html#maxSuffix"><span class="hs-identifier hs-var">maxSuffix</span></a></span><span> </span><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068074"><span class="hs-identifier hs-var">t</span></a></span><span>
+</span><span id="line-119"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">strReversedPrefix :: Seq (Symbol n)
+</span><a href="EERTREE.Simple.html#strReversedPrefix"><span class="hs-identifier hs-var">strReversedPrefix</span></a></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Seq (Symbol n) -&gt; Bool
+forall a. Seq a -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Bool
+</span><span class="hs-identifier hs-var">null</span></span><span> </span><span class="annot"><span class="annottext">Seq (Symbol n)
+</span><a href="#local-6989586621679068078"><span class="hs-identifier hs-var">cs</span></a></span><span> </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">Seq (Symbol n)
+forall a. Seq a
+</span><span class="hs-identifier hs-var">Seq.empty</span></span><span> </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">EERTREE n -&gt; Seq (Symbol n)
+forall (n :: Nat). EERTREE n -&gt; Seq (Symbol n)
+</span><a href="EERTREE.Simple.html#strReversedPrefix"><span class="hs-identifier hs-var">strReversedPrefix</span></a></span><span> </span><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068074"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="annot"><span class="annottext">Seq (Symbol n) -&gt; Symbol n -&gt; Seq (Symbol n)
+forall a. Seq a -&gt; a -&gt; Seq a
+</span><span class="hs-operator hs-var">Seq.|&gt;</span></span><span> </span><span class="annot"><span class="annottext">Symbol n
+</span><a href="#local-6989586621679068073"><span class="hs-identifier hs-var">c</span></a></span><span>
+</span><span id="line-120"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">strSuffix :: Seq (Symbol n)
+</span><a href="EERTREE.Simple.html#strSuffix"><span class="hs-identifier hs-var">strSuffix</span></a></span><span>          </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Seq (Symbol n)
+</span><a href="#local-6989586621679068078"><span class="hs-identifier hs-var">cs</span></a></span><span>
+</span><span id="line-121"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">palindromes :: [Node n]
+</span><a href="EERTREE.Simple.html#palindromes"><span class="hs-identifier hs-var">palindromes</span></a></span><span>        </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Node n
+</span><a href="#local-6989586621679068080"><span class="hs-identifier hs-var">newMaxPrefix</span></a></span><span> </span><span class="annot"><span class="annottext">Node n -&gt; [Node n] -&gt; [Node n]
+forall a. a -&gt; [a] -&gt; [a]
+</span><span class="hs-glyph hs-var">:</span></span><span> </span><span class="annot"><span class="annottext">EERTREE n -&gt; [Node n]
+forall (n :: Nat). EERTREE n -&gt; [Node n]
+</span><a href="EERTREE.Simple.html#palindromes"><span class="hs-identifier hs-var">palindromes</span></a></span><span> </span><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068074"><span class="hs-identifier hs-var">t</span></a></span><span>
+</span><span id="line-122"></span><span>      </span><span class="hs-special">}</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-123"></span><span>        </span><span id="local-6989586621679068080"><span class="annot"><span class="annottext">newMaxPrefix :: Node n
+</span><a href="#local-6989586621679068080"><span class="hs-identifier hs-var hs-var">newMaxPrefix</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Symbol n -&gt; Node n -&gt; Node n
+forall (n :: Nat). Symbol n -&gt; Node n -&gt; Node n
+</span><a href="EERTREE.Node.html#edge"><span class="hs-identifier hs-var">edge</span></a></span><span> </span><span class="annot"><span class="annottext">Symbol n
+</span><a href="#local-6989586621679068073"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">EERTREE n -&gt; Node n
+forall (n :: Nat). EERTREE n -&gt; Node n
+</span><a href="EERTREE.Simple.html#maxPrefix"><span class="hs-identifier hs-var">maxPrefix</span></a></span><span> </span><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068074"><span class="hs-identifier hs-var">t</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-124"></span><span>    </span><span class="annot"><span class="annottext">ViewL (Symbol n)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-125"></span><span>      </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Symbol n -&gt; Node n -&gt; Node n
+forall (n :: Nat). KnownNat n =&gt; Symbol n -&gt; Node n -&gt; Node n
+</span><a href="EERTREE.Node.html#newSuffixOf"><span class="hs-identifier hs-var">newSuffixOf</span></a></span><span> </span><span class="annot"><span class="annottext">Symbol n
+</span><a href="#local-6989586621679068073"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">EERTREE n -&gt; Node n
+forall (n :: Nat). EERTREE n -&gt; Node n
+</span><a href="EERTREE.Simple.html#maxPrefix"><span class="hs-identifier hs-var">maxPrefix</span></a></span><span> </span><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068074"><span class="hs-identifier hs-var">t</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-126"></span><span>        </span><span id="local-6989586621679068085"><span class="annot"><span class="annottext">Node n
+</span><a href="#local-6989586621679068085"><span class="hs-identifier hs-var">newMaxPrefix</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="EERTREE.Simple.html#EERTREE"><span class="hs-identifier hs-type">EERTREE</span></a></span><span>
+</span><span id="line-127"></span><span>          </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">strLen :: Int
+</span><a href="EERTREE.Simple.html#strLen"><span class="hs-identifier hs-var">strLen</span></a></span><span>             </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">EERTREE n -&gt; Int
+forall (n :: Nat). EERTREE n -&gt; Int
+</span><a href="EERTREE.Simple.html#strLen"><span class="hs-identifier hs-var">strLen</span></a></span><span> </span><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068074"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">+</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-128"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">maxPrefix :: Node n
+</span><a href="EERTREE.Simple.html#maxPrefix"><span class="hs-identifier hs-var">maxPrefix</span></a></span><span>          </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Node n
+</span><a href="#local-6989586621679068085"><span class="hs-identifier hs-var">newMaxPrefix</span></a></span><span>
+</span><span id="line-129"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">maxSuffix :: Node n
+</span><a href="EERTREE.Simple.html#maxSuffix"><span class="hs-identifier hs-var">maxSuffix</span></a></span><span>          </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Seq (Symbol n) -&gt; Bool
+forall a. Seq a -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Bool
+</span><span class="hs-identifier hs-var">null</span></span><span> </span><span class="annot"><span class="annottext">Seq (Symbol n)
+</span><a href="#local-6989586621679068086"><span class="hs-identifier hs-var">newStrSuffix</span></a></span><span> </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">Node n
+</span><a href="#local-6989586621679068085"><span class="hs-identifier hs-var">newMaxPrefix</span></a></span><span> </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">EERTREE n -&gt; Node n
+forall (n :: Nat). EERTREE n -&gt; Node n
+</span><a href="EERTREE.Simple.html#maxSuffix"><span class="hs-identifier hs-var">maxSuffix</span></a></span><span> </span><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068074"><span class="hs-identifier hs-var">t</span></a></span><span>
+</span><span id="line-130"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">strReversedPrefix :: Seq (Symbol n)
+</span><a href="EERTREE.Simple.html#strReversedPrefix"><span class="hs-identifier hs-var">strReversedPrefix</span></a></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">Seq (Symbol n) -&gt; Bool
+forall a. Seq a -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Bool
+</span><span class="hs-identifier hs-var">null</span></span><span> </span><span class="annot"><span class="annottext">Seq (Symbol n)
+</span><a href="#local-6989586621679068086"><span class="hs-identifier hs-var">newStrSuffix</span></a></span><span> </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">Seq (Symbol n)
+forall a. Seq a
+</span><span class="hs-identifier hs-var">Seq.empty</span></span><span> </span><span class="hs-keyword">else</span><span> </span><span class="annot"><span class="annottext">EERTREE n -&gt; Seq (Symbol n)
+forall (n :: Nat). EERTREE n -&gt; Seq (Symbol n)
+</span><a href="EERTREE.Simple.html#strReversedPrefix"><span class="hs-identifier hs-var">strReversedPrefix</span></a></span><span> </span><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068074"><span class="hs-identifier hs-var">t</span></a></span><span> </span><span class="annot"><span class="annottext">Seq (Symbol n) -&gt; Symbol n -&gt; Seq (Symbol n)
+forall a. Seq a -&gt; a -&gt; Seq a
+</span><span class="hs-operator hs-var">Seq.|&gt;</span></span><span> </span><span class="annot"><span class="annottext">Symbol n
+</span><a href="#local-6989586621679068073"><span class="hs-identifier hs-var">c</span></a></span><span>
+</span><span id="line-131"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">strSuffix :: Seq (Symbol n)
+</span><a href="EERTREE.Simple.html#strSuffix"><span class="hs-identifier hs-var">strSuffix</span></a></span><span>          </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Seq (Symbol n)
+</span><a href="#local-6989586621679068086"><span class="hs-identifier hs-var">newStrSuffix</span></a></span><span>
+</span><span id="line-132"></span><span>          </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">palindromes :: [Node n]
+</span><a href="EERTREE.Simple.html#palindromes"><span class="hs-identifier hs-var">palindromes</span></a></span><span>        </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Node n
+</span><a href="#local-6989586621679068085"><span class="hs-identifier hs-var">newMaxPrefix</span></a></span><span> </span><span class="annot"><span class="annottext">Node n -&gt; [Node n] -&gt; [Node n]
+forall a. a -&gt; [a] -&gt; [a]
+</span><span class="hs-glyph hs-var">:</span></span><span> </span><span class="annot"><span class="annottext">EERTREE n -&gt; [Node n]
+forall (n :: Nat). EERTREE n -&gt; [Node n]
+</span><a href="EERTREE.Simple.html#palindromes"><span class="hs-identifier hs-var">palindromes</span></a></span><span> </span><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068074"><span class="hs-identifier hs-var">t</span></a></span><span>
+</span><span id="line-133"></span><span>          </span><span class="hs-special">}</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-134"></span><span>              </span><span id="local-6989586621679068086"><span class="annot"><span class="annottext">newStrSuffix :: Seq (Symbol n)
+</span><a href="#local-6989586621679068086"><span class="hs-identifier hs-var hs-var">newStrSuffix</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Seq (Symbol n) -&gt; Seq (Symbol n)
+forall a. Int -&gt; Seq a -&gt; Seq a
+</span><span class="hs-identifier hs-var">Seq.drop</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679068091"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-glyph hs-var">-</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Node n -&gt; Seq (Symbol n)
+forall (n :: Nat). Node n -&gt; Seq (Symbol n)
+</span><a href="EERTREE.Node.html#value"><span class="hs-identifier hs-var">value</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">EERTREE n -&gt; Node n
+forall (n :: Nat). EERTREE n -&gt; Node n
+</span><a href="EERTREE.Simple.html#maxPrefix"><span class="hs-identifier hs-var">maxPrefix</span></a></span><span> </span><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068074"><span class="hs-identifier hs-var">t</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Seq (Symbol n) -&gt; Seq (Symbol n) -&gt; Seq (Symbol n)
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">EERTREE n -&gt; Seq (Symbol n)
+forall (n :: Nat). EERTREE n -&gt; Seq (Symbol n)
+</span><a href="EERTREE.Simple.html#strSuffix"><span class="hs-identifier hs-var">strSuffix</span></a></span><span> </span><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068074"><span class="hs-identifier hs-var">t</span></a></span><span>
+</span><span id="line-135"></span><span>              </span><span id="local-6989586621679068091"><span class="annot"><span class="annottext">n :: Int
+</span><a href="#local-6989586621679068091"><span class="hs-identifier hs-var hs-var">n</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Node n -&gt; Int
+forall (n :: Nat). Node n -&gt; Int
+</span><a href="EERTREE.Node.html#len"><span class="hs-identifier hs-var">len</span></a></span><span> </span><span class="annot"><span class="annottext">Node n
+</span><a href="#local-6989586621679068085"><span class="hs-identifier hs-var">newMaxPrefix</span></a></span><span>
+</span><span id="line-136"></span><span>
+</span><span id="line-137"></span><span class="hs-comment">-- | Add a symbol to the end of a string</span><span>
+</span><span id="line-138"></span><span class="hs-comment">-- corresponding to an eertree</span><span>
+</span><span id="line-139"></span><span class="hs-comment">--</span><span>
+</span><span id="line-140"></span><span class="hs-comment">-- &gt;&gt;&gt; fromEERTREE (append 0 (eertreeFromString @2 &quot;01001&quot;))</span><span>
+</span><span id="line-141"></span><span class="hs-comment">-- [0,1,0,0,1,0]</span><span>
+</span><span id="line-142"></span><span id="local-6989586621679068093"><span class="annot"><a href="EERTREE.Simple.html#append"><span class="hs-identifier hs-type">append</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">KnownNat</span></span><span> </span><span class="annot"><a href="#local-6989586621679068093"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="EERTREE.Symbol.html#Symbol"><span class="hs-identifier hs-type">Symbol</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679068093"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="EERTREE.Simple.html#EERTREE"><span class="hs-identifier hs-type">EERTREE</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679068093"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="EERTREE.Simple.html#EERTREE"><span class="hs-identifier hs-type">EERTREE</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679068093"><span class="hs-identifier hs-type">n</span></a></span></span><span>
+</span><span id="line-143"></span><span id="append"><span class="annot"><span class="annottext">append :: forall (n :: Nat). KnownNat n =&gt; Symbol n -&gt; EERTREE n -&gt; EERTREE n
+</span><a href="EERTREE.Simple.html#append"><span class="hs-identifier hs-var hs-var">append</span></a></span></span><span> </span><span id="local-6989586621679068099"><span class="annot"><span class="annottext">Symbol n
+</span><a href="#local-6989586621679068099"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span id="local-6989586621679068100"><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068100"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">EERTREE n -&gt; EERTREE n
+forall (n :: Nat). KnownNat n =&gt; EERTREE n -&gt; EERTREE n
+</span><a href="EERTREE.Simple.html#reverseEERTREE"><span class="hs-identifier hs-var">reverseEERTREE</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Symbol n -&gt; EERTREE n -&gt; EERTREE n
+forall (n :: Nat). KnownNat n =&gt; Symbol n -&gt; EERTREE n -&gt; EERTREE n
+</span><a href="EERTREE.Simple.html#prepend"><span class="hs-identifier hs-var">prepend</span></a></span><span> </span><span class="annot"><span class="annottext">Symbol n
+</span><a href="#local-6989586621679068099"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">EERTREE n -&gt; EERTREE n
+forall (n :: Nat). KnownNat n =&gt; EERTREE n -&gt; EERTREE n
+</span><a href="EERTREE.Simple.html#reverseEERTREE"><span class="hs-identifier hs-var">reverseEERTREE</span></a></span><span> </span><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068100"><span class="hs-identifier hs-var">t</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-144"></span><span>
+</span><span id="line-145"></span><span class="hs-comment">-- | Merge two eertrees in O(1) on average</span><span>
+</span><span id="line-146"></span><span class="hs-comment">--</span><span>
+</span><span id="line-147"></span><span class="hs-comment">-- &gt;&gt;&gt; fromEERTREE (merge @2 &quot;0110100&quot; &quot;11001001&quot;)</span><span>
+</span><span id="line-148"></span><span class="hs-comment">-- [0,1,1,0,1,0,0,1,1,0,0,1,0,0,1]</span><span>
+</span><span id="line-149"></span><span class="hs-comment">--</span><span>
+</span><span id="line-150"></span><span class="hs-comment">-- &gt;&gt;&gt; fromEERTREE (merge @2 &quot;10010011&quot; &quot;0010110&quot;)</span><span>
+</span><span id="line-151"></span><span class="hs-comment">-- [1,0,0,1,0,0,1,1,0,0,1,0,1,1,0]</span><span>
+</span><span id="line-152"></span><span id="local-6989586621679067815"><span class="annot"><a href="EERTREE.Simple.html#merge"><span class="hs-identifier hs-type">merge</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">KnownNat</span></span><span> </span><span class="annot"><a href="#local-6989586621679067815"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="EERTREE.Simple.html#EERTREE"><span class="hs-identifier hs-type">EERTREE</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679067815"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="EERTREE.Simple.html#EERTREE"><span class="hs-identifier hs-type">EERTREE</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679067815"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="EERTREE.Simple.html#EERTREE"><span class="hs-identifier hs-type">EERTREE</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679067815"><span class="hs-identifier hs-type">n</span></a></span></span><span>
+</span><span id="line-153"></span><span id="merge"><span class="annot"><span class="annottext">merge :: forall (n :: Nat).
+KnownNat n =&gt;
+EERTREE n -&gt; EERTREE n -&gt; EERTREE n
+</span><a href="EERTREE.Simple.html#merge"><span class="hs-identifier hs-var hs-var">merge</span></a></span></span><span> </span><span id="local-6989586621679068104"><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068104"><span class="hs-identifier hs-var">t1</span></a></span></span><span> </span><span id="local-6989586621679068105"><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068105"><span class="hs-identifier hs-var">t2</span></a></span></span><span>
+</span><span id="line-154"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">EERTREE n -&gt; Int
+forall (n :: Nat). EERTREE n -&gt; Int
+</span><a href="EERTREE.Simple.html#strLen"><span class="hs-identifier hs-var">strLen</span></a></span><span> </span><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068104"><span class="hs-identifier hs-var">t1</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&lt;=</span></span><span> </span><span class="annot"><span class="annottext">EERTREE n -&gt; Int
+forall (n :: Nat). EERTREE n -&gt; Int
+</span><a href="EERTREE.Simple.html#strLen"><span class="hs-identifier hs-var">strLen</span></a></span><span> </span><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068105"><span class="hs-identifier hs-var">t2</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Seq (Symbol n) -&gt; EERTREE n -&gt; [Node n] -&gt; EERTREE n
+</span><a href="#local-6989586621679068107"><span class="hs-identifier hs-var">mergeLeft</span></a></span><span>  </span><span class="annot"><span class="annottext">Seq (Symbol n)
+</span><a href="#local-6989586621679068108"><span class="hs-identifier hs-var">s1</span></a></span><span> </span><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068105"><span class="hs-identifier hs-var">t2</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-155"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">otherwise</span></span><span>              </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">EERTREE n -&gt; Seq (Symbol n) -&gt; [Node n] -&gt; EERTREE n
+</span><a href="#local-6989586621679068109"><span class="hs-identifier hs-var">mergeRight</span></a></span><span> </span><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068104"><span class="hs-identifier hs-var">t1</span></a></span><span> </span><span class="annot"><span class="annottext">Seq (Symbol n)
+</span><a href="#local-6989586621679068110"><span class="hs-identifier hs-var">s2</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-156"></span><span>    </span><span class="hs-keyword">where</span><span>
+</span><span id="line-157"></span><span>      </span><span class="hs-comment">-- | Centers of max suffix and prefix</span><span>
+</span><span id="line-158"></span><span>      </span><span id="local-6989586621679068122"><span class="annot"><span class="annottext">c1 :: Double
+</span><a href="#local-6989586621679068122"><span class="hs-identifier hs-var hs-var">c1</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Double
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">fromIntegral</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">EERTREE n -&gt; Int
+forall (n :: Nat). EERTREE n -&gt; Int
+</span><a href="EERTREE.Simple.html#strLen"><span class="hs-identifier hs-var">strLen</span></a></span><span> </span><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068104"><span class="hs-identifier hs-var">t1</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Double
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-glyph hs-var">-</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Double
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">fromIntegral</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Node n -&gt; Int
+forall (n :: Nat). Node n -&gt; Int
+</span><a href="EERTREE.Node.html#len"><span class="hs-identifier hs-var">len</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">EERTREE n -&gt; Node n
+forall (n :: Nat). EERTREE n -&gt; Node n
+</span><a href="EERTREE.Simple.html#maxSuffix"><span class="hs-identifier hs-var">maxSuffix</span></a></span><span> </span><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068104"><span class="hs-identifier hs-var">t1</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Double
+forall a. Fractional a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">/</span></span><span> </span><span class="annot"><span class="annottext">Double
+</span><span class="hs-number">2</span></span><span>
+</span><span id="line-159"></span><span>      </span><span id="local-6989586621679068132"><span class="annot"><span class="annottext">c2 :: Double
+</span><a href="#local-6989586621679068132"><span class="hs-identifier hs-var hs-var">c2</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Double
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">fromIntegral</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">EERTREE n -&gt; Int
+forall (n :: Nat). EERTREE n -&gt; Int
+</span><a href="EERTREE.Simple.html#strLen"><span class="hs-identifier hs-var">strLen</span></a></span><span> </span><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068104"><span class="hs-identifier hs-var">t1</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Double
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">+</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Double
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">fromIntegral</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Node n -&gt; Int
+forall (n :: Nat). Node n -&gt; Int
+</span><a href="EERTREE.Node.html#len"><span class="hs-identifier hs-var">len</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">EERTREE n -&gt; Node n
+forall (n :: Nat). EERTREE n -&gt; Node n
+</span><a href="EERTREE.Simple.html#maxPrefix"><span class="hs-identifier hs-var">maxPrefix</span></a></span><span> </span><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068105"><span class="hs-identifier hs-var">t2</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Double
+forall a. Fractional a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">/</span></span><span> </span><span class="annot"><span class="annottext">Double
+</span><span class="hs-number">2</span></span><span>
+</span><span id="line-160"></span><span>
+</span><span id="line-161"></span><span>      </span><span class="hs-comment">-- | Strings representing the eertrees</span><span>
+</span><span id="line-162"></span><span>      </span><span id="local-6989586621679068108"><span class="annot"><span class="annottext">s1 :: Seq (Symbol n)
+</span><a href="#local-6989586621679068108"><span class="hs-identifier hs-var hs-var">s1</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">EERTREE n -&gt; Seq (Symbol n)
+forall (n :: Nat). EERTREE n -&gt; Seq (Symbol n)
+</span><a href="EERTREE.Simple.html#eertreeToSeqReversed"><span class="hs-identifier hs-var">eertreeToSeqReversed</span></a></span><span> </span><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068104"><span class="hs-identifier hs-var">t1</span></a></span><span>
+</span><span id="line-163"></span><span>      </span><span id="local-6989586621679068110"><span class="annot"><span class="annottext">s2 :: Seq (Symbol n)
+</span><a href="#local-6989586621679068110"><span class="hs-identifier hs-var hs-var">s2</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">EERTREE n -&gt; Seq (Symbol n)
+forall (n :: Nat). EERTREE n -&gt; Seq (Symbol n)
+</span><a href="EERTREE.Simple.html#eertreeToSeq"><span class="hs-identifier hs-var">eertreeToSeq</span></a></span><span> </span><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068105"><span class="hs-identifier hs-var">t2</span></a></span><span>
+</span><span id="line-164"></span><span>
+</span><span id="line-165"></span><span>      </span><span class="hs-comment">-- | Merge by prepending symbols to `t2`</span><span>
+</span><span id="line-166"></span><span>      </span><span id="local-6989586621679068107"><span class="annot"><span class="annottext">mergeLeft :: Seq (Symbol n) -&gt; EERTREE n -&gt; [Node n] -&gt; EERTREE n
+</span><a href="#local-6989586621679068107"><span class="hs-identifier hs-var hs-var">mergeLeft</span></a></span></span><span> </span><span id="local-6989586621679068145"><span class="annot"><span class="annottext">Seq (Symbol n)
+</span><a href="#local-6989586621679068145"><span class="hs-identifier hs-var">s1'</span></a></span></span><span> </span><span id="local-6989586621679068146"><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068146"><span class="hs-identifier hs-var">t2'</span></a></span></span><span> </span><span id="local-6989586621679068147"><span class="annot"><span class="annottext">[Node n]
+</span><a href="#local-6989586621679068147"><span class="hs-identifier hs-var">pals</span></a></span></span><span>
+</span><span id="line-167"></span><span>        </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Seq (Symbol n) -&gt; Bool
+forall a. Seq a -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Bool
+</span><span class="hs-identifier hs-var">null</span></span><span> </span><span class="annot"><span class="annottext">Seq (Symbol n)
+</span><a href="#local-6989586621679068145"><span class="hs-identifier hs-var">s1'</span></a></span><span>           </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068146"><span class="hs-identifier hs-var">t2'</span></a></span><span>
+</span><span id="line-168"></span><span>        </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679068122"><span class="hs-identifier hs-var">c1</span></a></span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&lt;=</span></span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679068148"><span class="hs-identifier hs-var">newPalCenter</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Seq (Symbol n) -&gt; EERTREE n -&gt; [Node n] -&gt; EERTREE n
+</span><a href="#local-6989586621679068107"><span class="hs-identifier hs-var">mergeLeft</span></a></span><span> </span><span class="annot"><span class="annottext">Seq (Symbol n)
+</span><a href="#local-6989586621679068149"><span class="hs-identifier hs-var">cs</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Symbol n -&gt; EERTREE n -&gt; EERTREE n
+forall (n :: Nat). KnownNat n =&gt; Symbol n -&gt; EERTREE n -&gt; EERTREE n
+</span><a href="EERTREE.Simple.html#prepend"><span class="hs-identifier hs-var">prepend</span></a></span><span> </span><span class="annot"><span class="annottext">Symbol n
+</span><a href="#local-6989586621679068150"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068146"><span class="hs-identifier hs-var">t2'</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Node n
+</span><a href="#local-6989586621679068151"><span class="hs-identifier hs-var">newPal</span></a></span><span> </span><span class="annot"><span class="annottext">Node n -&gt; [Node n] -&gt; [Node n]
+forall a. a -&gt; [a] -&gt; [a]
+</span><span class="hs-glyph hs-var">:</span></span><span> </span><span class="annot"><span class="annottext">[Node n]
+</span><a href="#local-6989586621679068147"><span class="hs-identifier hs-var">pals</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-169"></span><span>        </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">otherwise</span></span><span>          </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068146"><span class="hs-identifier hs-var">t2'</span></a></span><span> </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">strLen :: Int
+</span><a href="EERTREE.Simple.html#strLen"><span class="hs-identifier hs-var">strLen</span></a></span><span>             </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">EERTREE n -&gt; Int
+forall (n :: Nat). EERTREE n -&gt; Int
+</span><a href="EERTREE.Simple.html#strLen"><span class="hs-identifier hs-var">strLen</span></a></span><span> </span><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068104"><span class="hs-identifier hs-var">t1</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">+</span></span><span> </span><span class="annot"><span class="annottext">EERTREE n -&gt; Int
+forall (n :: Nat). EERTREE n -&gt; Int
+</span><a href="EERTREE.Simple.html#strLen"><span class="hs-identifier hs-var">strLen</span></a></span><span> </span><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068105"><span class="hs-identifier hs-var">t2</span></a></span><span>
+</span><span id="line-170"></span><span>                                   </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">maxPrefix :: Node n
+</span><a href="EERTREE.Simple.html#maxPrefix"><span class="hs-identifier hs-var">maxPrefix</span></a></span><span>          </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">EERTREE n -&gt; Node n
+forall (n :: Nat). EERTREE n -&gt; Node n
+</span><a href="EERTREE.Simple.html#maxPrefix"><span class="hs-identifier hs-var">maxPrefix</span></a></span><span> </span><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068104"><span class="hs-identifier hs-var">t1</span></a></span><span>
+</span><span id="line-171"></span><span>                                   </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">strReversedPrefix :: Seq (Symbol n)
+</span><a href="EERTREE.Simple.html#strReversedPrefix"><span class="hs-identifier hs-var">strReversedPrefix</span></a></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">EERTREE n -&gt; Seq (Symbol n)
+forall (n :: Nat). EERTREE n -&gt; Seq (Symbol n)
+</span><a href="EERTREE.Simple.html#strReversedPrefix"><span class="hs-identifier hs-var">strReversedPrefix</span></a></span><span> </span><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068146"><span class="hs-identifier hs-var">t2'</span></a></span><span> </span><span class="annot"><span class="annottext">Seq (Symbol n) -&gt; Seq (Symbol n) -&gt; Seq (Symbol n)
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">Seq (Symbol n)
+</span><a href="#local-6989586621679068145"><span class="hs-identifier hs-var">s1'</span></a></span><span>
+</span><span id="line-172"></span><span>                                   </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">strSuffix :: Seq (Symbol n)
+</span><a href="EERTREE.Simple.html#strSuffix"><span class="hs-identifier hs-var">strSuffix</span></a></span><span>          </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">EERTREE n -&gt; Seq (Symbol n)
+forall (n :: Nat). EERTREE n -&gt; Seq (Symbol n)
+</span><a href="EERTREE.Simple.html#strSuffix"><span class="hs-identifier hs-var">strSuffix</span></a></span><span> </span><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068104"><span class="hs-identifier hs-var">t1</span></a></span><span> </span><span class="annot"><span class="annottext">Seq (Symbol n) -&gt; Seq (Symbol n) -&gt; Seq (Symbol n)
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">EERTREE n -&gt; Seq (Symbol n)
+forall (n :: Nat). EERTREE n -&gt; Seq (Symbol n)
+</span><a href="EERTREE.Simple.html#eertreeToSeq"><span class="hs-identifier hs-var">eertreeToSeq</span></a></span><span> </span><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068105"><span class="hs-identifier hs-var">t2</span></a></span><span>
+</span><span id="line-173"></span><span>                                   </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">palindromes :: [Node n]
+</span><a href="EERTREE.Simple.html#palindromes"><span class="hs-identifier hs-var">palindromes</span></a></span><span>        </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Node n]
+</span><a href="#local-6989586621679068147"><span class="hs-identifier hs-var">pals</span></a></span><span> </span><span class="annot"><span class="annottext">[Node n] -&gt; [Node n] -&gt; [Node n]
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">EERTREE n -&gt; [Node n]
+forall (n :: Nat). EERTREE n -&gt; [Node n]
+</span><a href="EERTREE.Simple.html#palindromes"><span class="hs-identifier hs-var">palindromes</span></a></span><span> </span><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068104"><span class="hs-identifier hs-var">t1</span></a></span><span> </span><span class="annot"><span class="annottext">[Node n] -&gt; [Node n] -&gt; [Node n]
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">EERTREE n -&gt; [Node n]
+forall (n :: Nat). EERTREE n -&gt; [Node n]
+</span><a href="EERTREE.Simple.html#palindromes"><span class="hs-identifier hs-var">palindromes</span></a></span><span> </span><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068105"><span class="hs-identifier hs-var">t2</span></a></span><span>
+</span><span id="line-174"></span><span>                                   </span><span class="hs-special">}</span><span>
+</span><span id="line-175"></span><span>        </span><span class="hs-keyword">where</span><span>
+</span><span id="line-176"></span><span>          </span><span class="hs-comment">-- | Symbol to prepend</span><span>
+</span><span id="line-177"></span><span>          </span><span class="hs-special">(</span><span id="local-6989586621679068149"><span class="annot"><span class="annottext">Seq (Symbol n)
+</span><a href="#local-6989586621679068149"><span class="hs-identifier hs-var">cs</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679068150"><span class="annot"><span class="annottext">Symbol n
+</span><a href="#local-6989586621679068150"><span class="hs-identifier hs-var">c</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Seq (Symbol n) -&gt; ViewL (Symbol n)
+forall a. Seq a -&gt; ViewL a
+</span><span class="hs-identifier hs-var">Seq.viewl</span></span><span> </span><span class="annot"><span class="annottext">Seq (Symbol n)
+</span><a href="#local-6989586621679068145"><span class="hs-identifier hs-var">s1'</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-178"></span><span>                      </span><span class="annot"><span class="annottext">ViewL (Symbol n)
+</span><span class="hs-identifier hs-var">Seq.EmptyL</span></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Seq (Symbol n)
+forall a. Seq a
+</span><span class="hs-identifier hs-var">Seq.empty</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Symbol n
+forall (n :: Nat). Int -&gt; Symbol n
+</span><a href="EERTREE.Symbol.html#Symbol"><span class="hs-identifier hs-var">Symbol</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span class="hs-special">)</span><span>
+</span><span id="line-179"></span><span>                      </span><span id="local-6989586621679068153"><span class="annot"><span class="annottext">Symbol n
+</span><a href="#local-6989586621679068153"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="annot"><span class="hs-operator hs-type">Seq.:&lt;</span></span><span> </span><span id="local-6989586621679068154"><span class="annot"><span class="annottext">Seq (Symbol n)
+</span><a href="#local-6989586621679068154"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Seq (Symbol n)
+</span><a href="#local-6989586621679068154"><span class="hs-identifier hs-var">xs</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Symbol n
+</span><a href="#local-6989586621679068153"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-180"></span><span>
+</span><span id="line-181"></span><span>          </span><span class="hs-comment">-- | New palindrome</span><span>
+</span><span id="line-182"></span><span>          </span><span id="local-6989586621679068151"><span class="annot"><span class="annottext">newPal :: Node n
+</span><a href="#local-6989586621679068151"><span class="hs-identifier hs-var hs-var">newPal</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Seq (Symbol n) -&gt; ViewL (Symbol n)
+forall a. Seq a -&gt; ViewL a
+</span><span class="hs-identifier hs-var">Seq.viewl</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">EERTREE n -&gt; Seq (Symbol n)
+forall (n :: Nat). EERTREE n -&gt; Seq (Symbol n)
+</span><a href="EERTREE.Simple.html#strSuffix"><span class="hs-identifier hs-var">strSuffix</span></a></span><span> </span><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068146"><span class="hs-identifier hs-var">t2'</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-183"></span><span>                     </span><span id="local-6989586621679068157"><span class="annot"><span class="annottext">Symbol n
+</span><a href="#local-6989586621679068157"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="annot"><span class="hs-operator hs-type">Seq.:&lt;</span></span><span> </span><span class="annot"><span class="annottext">Seq (Symbol n)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Symbol n
+</span><a href="#local-6989586621679068150"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Symbol n -&gt; Symbol n -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">Symbol n
+</span><a href="#local-6989586621679068157"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Symbol n -&gt; Node n -&gt; Node n
+forall (n :: Nat). Symbol n -&gt; Node n -&gt; Node n
+</span><a href="EERTREE.Node.html#edge"><span class="hs-identifier hs-var">edge</span></a></span><span> </span><span class="annot"><span class="annottext">Symbol n
+</span><a href="#local-6989586621679068150"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">EERTREE n -&gt; Node n
+forall (n :: Nat). EERTREE n -&gt; Node n
+</span><a href="EERTREE.Simple.html#maxPrefix"><span class="hs-identifier hs-var">maxPrefix</span></a></span><span> </span><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068146"><span class="hs-identifier hs-var">t2'</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-184"></span><span>                     </span><span class="annot"><span class="annottext">ViewL (Symbol n)
+</span><span class="hs-identifier">_</span></span><span>                   </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Symbol n -&gt; Node n -&gt; Node n
+forall (n :: Nat). KnownNat n =&gt; Symbol n -&gt; Node n -&gt; Node n
+</span><a href="EERTREE.Node.html#newSuffixOf"><span class="hs-identifier hs-var">newSuffixOf</span></a></span><span> </span><span class="annot"><span class="annottext">Symbol n
+</span><a href="#local-6989586621679068150"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">EERTREE n -&gt; Node n
+forall (n :: Nat). EERTREE n -&gt; Node n
+</span><a href="EERTREE.Simple.html#maxPrefix"><span class="hs-identifier hs-var">maxPrefix</span></a></span><span> </span><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068146"><span class="hs-identifier hs-var">t2'</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-185"></span><span>
+</span><span id="line-186"></span><span>          </span><span class="hs-comment">-- | Center of a new palindrome</span><span>
+</span><span id="line-187"></span><span>          </span><span id="local-6989586621679068148"><span class="annot"><span class="annottext">newPalCenter :: Double
+</span><a href="#local-6989586621679068148"><span class="hs-identifier hs-var hs-var">newPalCenter</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Double
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">fromIntegral</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Seq (Symbol n) -&gt; Int
+forall a. Seq a -&gt; Int
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Int
+</span><span class="hs-identifier hs-var">length</span></span><span> </span><span class="annot"><span class="annottext">Seq (Symbol n)
+</span><a href="#local-6989586621679068145"><span class="hs-identifier hs-var">s1'</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Double
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">+</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Double
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">fromIntegral</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Node n -&gt; Int
+forall (n :: Nat). Node n -&gt; Int
+</span><a href="EERTREE.Node.html#len"><span class="hs-identifier hs-var">len</span></a></span><span> </span><span class="annot"><span class="annottext">Node n
+</span><a href="#local-6989586621679068151"><span class="hs-identifier hs-var">newPal</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Double
+forall a. Fractional a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">/</span></span><span> </span><span class="annot"><span class="annottext">Double
+</span><span class="hs-number">2</span></span><span>
+</span><span id="line-188"></span><span>
+</span><span id="line-189"></span><span>      </span><span class="hs-comment">-- | Merge by appending symbols to `t1`</span><span>
+</span><span id="line-190"></span><span>      </span><span id="local-6989586621679068109"><span class="annot"><span class="annottext">mergeRight :: EERTREE n -&gt; Seq (Symbol n) -&gt; [Node n] -&gt; EERTREE n
+</span><a href="#local-6989586621679068109"><span class="hs-identifier hs-var hs-var">mergeRight</span></a></span></span><span> </span><span id="local-6989586621679068177"><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068177"><span class="hs-identifier hs-var">t1'</span></a></span></span><span> </span><span id="local-6989586621679068178"><span class="annot"><span class="annottext">Seq (Symbol n)
+</span><a href="#local-6989586621679068178"><span class="hs-identifier hs-var">s2'</span></a></span></span><span> </span><span id="local-6989586621679068179"><span class="annot"><span class="annottext">[Node n]
+</span><a href="#local-6989586621679068179"><span class="hs-identifier hs-var">pals</span></a></span></span><span>
+</span><span id="line-191"></span><span>        </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Seq (Symbol n) -&gt; Bool
+forall a. Seq a -&gt; Bool
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Bool
+</span><span class="hs-identifier hs-var">null</span></span><span> </span><span class="annot"><span class="annottext">Seq (Symbol n)
+</span><a href="#local-6989586621679068178"><span class="hs-identifier hs-var">s2'</span></a></span><span>           </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068177"><span class="hs-identifier hs-var">t1'</span></a></span><span>
+</span><span id="line-192"></span><span>        </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679068180"><span class="hs-identifier hs-var">newPalCenter</span></a></span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&lt;=</span></span><span> </span><span class="annot"><span class="annottext">Double
+</span><a href="#local-6989586621679068132"><span class="hs-identifier hs-var">c2</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">EERTREE n -&gt; Seq (Symbol n) -&gt; [Node n] -&gt; EERTREE n
+</span><a href="#local-6989586621679068109"><span class="hs-identifier hs-var">mergeRight</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Symbol n -&gt; EERTREE n -&gt; EERTREE n
+forall (n :: Nat). KnownNat n =&gt; Symbol n -&gt; EERTREE n -&gt; EERTREE n
+</span><a href="EERTREE.Simple.html#append"><span class="hs-identifier hs-var">append</span></a></span><span> </span><span class="annot"><span class="annottext">Symbol n
+</span><a href="#local-6989586621679068181"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068177"><span class="hs-identifier hs-var">t1'</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Seq (Symbol n)
+</span><a href="#local-6989586621679068182"><span class="hs-identifier hs-var">cs</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Node n
+</span><a href="#local-6989586621679068183"><span class="hs-identifier hs-var">newPal</span></a></span><span> </span><span class="annot"><span class="annottext">Node n -&gt; [Node n] -&gt; [Node n]
+forall a. a -&gt; [a] -&gt; [a]
+</span><span class="hs-glyph hs-var">:</span></span><span> </span><span class="annot"><span class="annottext">[Node n]
+</span><a href="#local-6989586621679068179"><span class="hs-identifier hs-var">pals</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-193"></span><span>        </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">otherwise</span></span><span>          </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068177"><span class="hs-identifier hs-var">t1'</span></a></span><span> </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">strLen :: Int
+</span><a href="EERTREE.Simple.html#strLen"><span class="hs-identifier hs-var">strLen</span></a></span><span>             </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">EERTREE n -&gt; Int
+forall (n :: Nat). EERTREE n -&gt; Int
+</span><a href="EERTREE.Simple.html#strLen"><span class="hs-identifier hs-var">strLen</span></a></span><span> </span><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068104"><span class="hs-identifier hs-var">t1</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">+</span></span><span> </span><span class="annot"><span class="annottext">EERTREE n -&gt; Int
+forall (n :: Nat). EERTREE n -&gt; Int
+</span><a href="EERTREE.Simple.html#strLen"><span class="hs-identifier hs-var">strLen</span></a></span><span> </span><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068105"><span class="hs-identifier hs-var">t2</span></a></span><span>
+</span><span id="line-194"></span><span>                                   </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">maxSuffix :: Node n
+</span><a href="EERTREE.Simple.html#maxSuffix"><span class="hs-identifier hs-var">maxSuffix</span></a></span><span>          </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">EERTREE n -&gt; Node n
+forall (n :: Nat). EERTREE n -&gt; Node n
+</span><a href="EERTREE.Simple.html#maxSuffix"><span class="hs-identifier hs-var">maxSuffix</span></a></span><span> </span><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068105"><span class="hs-identifier hs-var">t2</span></a></span><span>
+</span><span id="line-195"></span><span>                                   </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">strReversedPrefix :: Seq (Symbol n)
+</span><a href="EERTREE.Simple.html#strReversedPrefix"><span class="hs-identifier hs-var">strReversedPrefix</span></a></span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">EERTREE n -&gt; Seq (Symbol n)
+forall (n :: Nat). EERTREE n -&gt; Seq (Symbol n)
+</span><a href="EERTREE.Simple.html#strReversedPrefix"><span class="hs-identifier hs-var">strReversedPrefix</span></a></span><span> </span><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068105"><span class="hs-identifier hs-var">t2</span></a></span><span> </span><span class="annot"><span class="annottext">Seq (Symbol n) -&gt; Seq (Symbol n) -&gt; Seq (Symbol n)
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">EERTREE n -&gt; Seq (Symbol n)
+forall (n :: Nat). EERTREE n -&gt; Seq (Symbol n)
+</span><a href="EERTREE.Simple.html#eertreeToSeqReversed"><span class="hs-identifier hs-var">eertreeToSeqReversed</span></a></span><span> </span><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068104"><span class="hs-identifier hs-var">t1</span></a></span><span>
+</span><span id="line-196"></span><span>                                   </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">strSuffix :: Seq (Symbol n)
+</span><a href="EERTREE.Simple.html#strSuffix"><span class="hs-identifier hs-var">strSuffix</span></a></span><span>          </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">EERTREE n -&gt; Seq (Symbol n)
+forall (n :: Nat). EERTREE n -&gt; Seq (Symbol n)
+</span><a href="EERTREE.Simple.html#strSuffix"><span class="hs-identifier hs-var">strSuffix</span></a></span><span> </span><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068177"><span class="hs-identifier hs-var">t1'</span></a></span><span> </span><span class="annot"><span class="annottext">Seq (Symbol n) -&gt; Seq (Symbol n) -&gt; Seq (Symbol n)
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">Seq (Symbol n)
+</span><a href="#local-6989586621679068178"><span class="hs-identifier hs-var">s2'</span></a></span><span>
+</span><span id="line-197"></span><span>                                   </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">palindromes :: [Node n]
+</span><a href="EERTREE.Simple.html#palindromes"><span class="hs-identifier hs-var">palindromes</span></a></span><span>        </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[Node n]
+</span><a href="#local-6989586621679068179"><span class="hs-identifier hs-var">pals</span></a></span><span> </span><span class="annot"><span class="annottext">[Node n] -&gt; [Node n] -&gt; [Node n]
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">EERTREE n -&gt; [Node n]
+forall (n :: Nat). EERTREE n -&gt; [Node n]
+</span><a href="EERTREE.Simple.html#palindromes"><span class="hs-identifier hs-var">palindromes</span></a></span><span> </span><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068104"><span class="hs-identifier hs-var">t1</span></a></span><span> </span><span class="annot"><span class="annottext">[Node n] -&gt; [Node n] -&gt; [Node n]
+forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">&lt;&gt;</span></span><span> </span><span class="annot"><span class="annottext">EERTREE n -&gt; [Node n]
+forall (n :: Nat). EERTREE n -&gt; [Node n]
+</span><a href="EERTREE.Simple.html#palindromes"><span class="hs-identifier hs-var">palindromes</span></a></span><span> </span><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068105"><span class="hs-identifier hs-var">t2</span></a></span><span>
+</span><span id="line-198"></span><span>                                   </span><span class="hs-special">}</span><span>
+</span><span id="line-199"></span><span>        </span><span class="hs-keyword">where</span><span>
+</span><span id="line-200"></span><span>          </span><span class="hs-comment">-- | Symbol to append</span><span>
+</span><span id="line-201"></span><span>          </span><span class="hs-special">(</span><span id="local-6989586621679068181"><span class="annot"><span class="annottext">Symbol n
+</span><a href="#local-6989586621679068181"><span class="hs-identifier hs-var">c</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679068182"><span class="annot"><span class="annottext">Seq (Symbol n)
+</span><a href="#local-6989586621679068182"><span class="hs-identifier hs-var">cs</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Seq (Symbol n) -&gt; ViewL (Symbol n)
+forall a. Seq a -&gt; ViewL a
+</span><span class="hs-identifier hs-var">Seq.viewl</span></span><span> </span><span class="annot"><span class="annottext">Seq (Symbol n)
+</span><a href="#local-6989586621679068178"><span class="hs-identifier hs-var">s2'</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-202"></span><span>                      </span><span class="annot"><span class="annottext">ViewL (Symbol n)
+</span><span class="hs-identifier hs-var">Seq.EmptyL</span></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Symbol n
+forall (n :: Nat). Int -&gt; Symbol n
+</span><a href="EERTREE.Symbol.html#Symbol"><span class="hs-identifier hs-var">Symbol</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Seq (Symbol n)
+forall a. Seq a
+</span><span class="hs-identifier hs-var">Seq.empty</span></span><span class="hs-special">)</span><span>
+</span><span id="line-203"></span><span>                      </span><span id="local-6989586621679068184"><span class="annot"><span class="annottext">Symbol n
+</span><a href="#local-6989586621679068184"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="annot"><span class="hs-operator hs-type">Seq.:&lt;</span></span><span> </span><span id="local-6989586621679068185"><span class="annot"><span class="annottext">Seq (Symbol n)
+</span><a href="#local-6989586621679068185"><span class="hs-identifier hs-var">xs</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Symbol n
+</span><a href="#local-6989586621679068184"><span class="hs-identifier hs-var">x</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Seq (Symbol n)
+</span><a href="#local-6989586621679068185"><span class="hs-identifier hs-var">xs</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-204"></span><span>
+</span><span id="line-205"></span><span>          </span><span class="hs-comment">-- | New palindrome</span><span>
+</span><span id="line-206"></span><span>          </span><span id="local-6989586621679068183"><span class="annot"><span class="annottext">newPal :: Node n
+</span><a href="#local-6989586621679068183"><span class="hs-identifier hs-var hs-var">newPal</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Seq (Symbol n) -&gt; ViewL (Symbol n)
+forall a. Seq a -&gt; ViewL a
+</span><span class="hs-identifier hs-var">Seq.viewl</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">EERTREE n -&gt; Seq (Symbol n)
+forall (n :: Nat). EERTREE n -&gt; Seq (Symbol n)
+</span><a href="EERTREE.Simple.html#strReversedPrefix"><span class="hs-identifier hs-var">strReversedPrefix</span></a></span><span> </span><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068177"><span class="hs-identifier hs-var">t1'</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-207"></span><span>                     </span><span id="local-6989586621679068188"><span class="annot"><span class="annottext">Symbol n
+</span><a href="#local-6989586621679068188"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="annot"><span class="hs-operator hs-type">Seq.:&lt;</span></span><span> </span><span class="annot"><span class="annottext">Seq (Symbol n)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Symbol n
+</span><a href="#local-6989586621679068181"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Symbol n -&gt; Symbol n -&gt; Bool
+forall a. Eq a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">Symbol n
+</span><a href="#local-6989586621679068188"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Symbol n -&gt; Node n -&gt; Node n
+forall (n :: Nat). Symbol n -&gt; Node n -&gt; Node n
+</span><a href="EERTREE.Node.html#edge"><span class="hs-identifier hs-var">edge</span></a></span><span> </span><span class="annot"><span class="annottext">Symbol n
+</span><a href="#local-6989586621679068181"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">EERTREE n -&gt; Node n
+forall (n :: Nat). EERTREE n -&gt; Node n
+</span><a href="EERTREE.Simple.html#maxSuffix"><span class="hs-identifier hs-var">maxSuffix</span></a></span><span> </span><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068177"><span class="hs-identifier hs-var">t1'</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-208"></span><span>                     </span><span class="annot"><span class="annottext">ViewL (Symbol n)
+</span><span class="hs-identifier">_</span></span><span>                   </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Symbol n -&gt; Node n -&gt; Node n
+forall (n :: Nat). KnownNat n =&gt; Symbol n -&gt; Node n -&gt; Node n
+</span><a href="EERTREE.Node.html#newSuffixOf"><span class="hs-identifier hs-var">newSuffixOf</span></a></span><span> </span><span class="annot"><span class="annottext">Symbol n
+</span><a href="#local-6989586621679068181"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">EERTREE n -&gt; Node n
+forall (n :: Nat). EERTREE n -&gt; Node n
+</span><a href="EERTREE.Simple.html#maxSuffix"><span class="hs-identifier hs-var">maxSuffix</span></a></span><span> </span><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068177"><span class="hs-identifier hs-var">t1'</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-209"></span><span>
+</span><span id="line-210"></span><span>          </span><span class="hs-comment">-- | Center of a new palindrome</span><span>
+</span><span id="line-211"></span><span>          </span><span id="local-6989586621679068180"><span class="annot"><span class="annottext">newPalCenter :: Double
+</span><a href="#local-6989586621679068180"><span class="hs-identifier hs-var hs-var">newPalCenter</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Double
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">fromIntegral</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">EERTREE n -&gt; Int
+forall (n :: Nat). EERTREE n -&gt; Int
+</span><a href="EERTREE.Simple.html#strLen"><span class="hs-identifier hs-var">strLen</span></a></span><span> </span><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068177"><span class="hs-identifier hs-var">t1'</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Double
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-glyph hs-var">-</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Double
+forall a b. (Integral a, Num b) =&gt; a -&gt; b
+</span><span class="hs-identifier hs-var">fromIntegral</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Node n -&gt; Int
+forall (n :: Nat). Node n -&gt; Int
+</span><a href="EERTREE.Node.html#len"><span class="hs-identifier hs-var">len</span></a></span><span> </span><span class="annot"><span class="annottext">Node n
+</span><a href="#local-6989586621679068183"><span class="hs-identifier hs-var">newPal</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Double -&gt; Double -&gt; Double
+forall a. Fractional a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">/</span></span><span> </span><span class="annot"><span class="annottext">Double
+</span><span class="hs-number">2</span></span><span>
+</span><span id="line-212"></span><span>
+</span><span id="line-213"></span><span class="hs-comment">-- | Merge two eertrees in min(|S1|, |S2|)</span><span>
+</span><span id="line-214"></span><span class="hs-comment">--</span><span>
+</span><span id="line-215"></span><span class="hs-comment">-- &gt;&gt;&gt; fromEERTREE (mergeLinear @2 &quot;0110100&quot; &quot;11001001&quot;)</span><span>
+</span><span id="line-216"></span><span class="hs-comment">-- [0,1,1,0,1,0,0,1,1,0,0,1,0,0,1]</span><span>
+</span><span id="line-217"></span><span class="hs-comment">--</span><span>
+</span><span id="line-218"></span><span class="hs-comment">-- &gt;&gt;&gt; fromEERTREE (mergeLinear @2 &quot;10010011&quot; &quot;0010110&quot;)</span><span>
+</span><span id="line-219"></span><span class="hs-comment">-- [1,0,0,1,0,0,1,1,0,0,1,0,1,1,0]</span><span>
+</span><span id="line-220"></span><span id="local-6989586621679068197"><span class="annot"><a href="EERTREE.Simple.html#mergeLinear"><span class="hs-identifier hs-type">mergeLinear</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">KnownNat</span></span><span> </span><span class="annot"><a href="#local-6989586621679068197"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="EERTREE.Simple.html#EERTREE"><span class="hs-identifier hs-type">EERTREE</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679068197"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="EERTREE.Simple.html#EERTREE"><span class="hs-identifier hs-type">EERTREE</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679068197"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="EERTREE.Simple.html#EERTREE"><span class="hs-identifier hs-type">EERTREE</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679068197"><span class="hs-identifier hs-type">n</span></a></span></span><span>
+</span><span id="line-221"></span><span id="mergeLinear"><span class="annot"><span class="annottext">mergeLinear :: forall (n :: Nat).
+KnownNat n =&gt;
+EERTREE n -&gt; EERTREE n -&gt; EERTREE n
+</span><a href="EERTREE.Simple.html#mergeLinear"><span class="hs-identifier hs-var hs-var">mergeLinear</span></a></span></span><span> </span><span id="local-6989586621679068205"><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068205"><span class="hs-identifier hs-var">t1</span></a></span></span><span> </span><span id="local-6989586621679068206"><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068206"><span class="hs-identifier hs-var">t2</span></a></span></span><span>
+</span><span id="line-222"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">EERTREE n -&gt; Int
+forall (n :: Nat). EERTREE n -&gt; Int
+</span><a href="EERTREE.Simple.html#strLen"><span class="hs-identifier hs-var">strLen</span></a></span><span> </span><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068205"><span class="hs-identifier hs-var">t1</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&lt;</span></span><span> </span><span class="annot"><span class="annottext">EERTREE n -&gt; Int
+forall (n :: Nat). EERTREE n -&gt; Int
+</span><a href="EERTREE.Simple.html#strLen"><span class="hs-identifier hs-var">strLen</span></a></span><span> </span><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068206"><span class="hs-identifier hs-var">t2</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Symbol n -&gt; EERTREE n -&gt; EERTREE n)
+-&gt; EERTREE n -&gt; Seq (Symbol n) -&gt; EERTREE n
+forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; Seq a -&gt; b
+forall (t :: * -&gt; *) a b.
+Foldable t =&gt;
+(a -&gt; b -&gt; b) -&gt; b -&gt; t a -&gt; b
+</span><span class="hs-identifier hs-var">foldr</span></span><span> </span><span class="annot"><span class="annottext">Symbol n -&gt; EERTREE n -&gt; EERTREE n
+forall (n :: Nat). KnownNat n =&gt; Symbol n -&gt; EERTREE n -&gt; EERTREE n
+</span><a href="EERTREE.Simple.html#prepend"><span class="hs-identifier hs-var">prepend</span></a></span><span> </span><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068206"><span class="hs-identifier hs-var">t2</span></a></span><span> </span><span class="annot"><span class="annottext">Seq (Symbol n)
+</span><a href="#local-6989586621679068208"><span class="hs-identifier hs-var">s1</span></a></span><span>
+</span><span id="line-223"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">otherwise</span></span><span>             </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Symbol n -&gt; EERTREE n -&gt; EERTREE n)
+-&gt; EERTREE n -&gt; Seq (Symbol n) -&gt; EERTREE n
+forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; Seq a -&gt; b
+forall (t :: * -&gt; *) a b.
+Foldable t =&gt;
+(a -&gt; b -&gt; b) -&gt; b -&gt; t a -&gt; b
+</span><span class="hs-identifier hs-var">foldr</span></span><span> </span><span class="annot"><span class="annottext">Symbol n -&gt; EERTREE n -&gt; EERTREE n
+forall (n :: Nat). KnownNat n =&gt; Symbol n -&gt; EERTREE n -&gt; EERTREE n
+</span><a href="EERTREE.Simple.html#append"><span class="hs-identifier hs-var">append</span></a></span><span> </span><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068205"><span class="hs-identifier hs-var">t1</span></a></span><span> </span><span class="annot"><span class="annottext">Seq (Symbol n)
+</span><a href="#local-6989586621679068209"><span class="hs-identifier hs-var">s2</span></a></span><span>
+</span><span id="line-224"></span><span>    </span><span class="hs-keyword">where</span><span>
+</span><span id="line-225"></span><span>      </span><span id="local-6989586621679068208"><span class="annot"><span class="annottext">s1 :: Seq (Symbol n)
+</span><a href="#local-6989586621679068208"><span class="hs-identifier hs-var hs-var">s1</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">EERTREE n -&gt; Seq (Symbol n)
+forall (n :: Nat). EERTREE n -&gt; Seq (Symbol n)
+</span><a href="EERTREE.Simple.html#eertreeToSeq"><span class="hs-identifier hs-var">eertreeToSeq</span></a></span><span> </span><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068205"><span class="hs-identifier hs-var">t1</span></a></span><span>
+</span><span id="line-226"></span><span>      </span><span id="local-6989586621679068209"><span class="annot"><span class="annottext">s2 :: Seq (Symbol n)
+</span><a href="#local-6989586621679068209"><span class="hs-identifier hs-var hs-var">s2</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">EERTREE n -&gt; Seq (Symbol n)
+forall (n :: Nat). EERTREE n -&gt; Seq (Symbol n)
+</span><a href="EERTREE.Simple.html#eertreeToSeqReversed"><span class="hs-identifier hs-var">eertreeToSeqReversed</span></a></span><span> </span><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068206"><span class="hs-identifier hs-var">t2</span></a></span><span>
+</span><span id="line-227"></span><span>
+</span><span id="line-228"></span><span class="annot"><span class="hs-comment">-- * Applications</span></span><span>
+</span><span id="line-229"></span><span>
+</span><span id="line-230"></span><span class="hs-comment">-- | Unique subpalindromes of a string.</span><span>
+</span><span id="line-231"></span><span class="hs-comment">--</span><span>
+</span><span id="line-232"></span><span class="hs-comment">-- &gt;&gt;&gt; subpalindromes @2 [0,1,0,0,1]</span><span>
+</span><span id="line-233"></span><span class="hs-comment">-- [[0,1,0],[1,0,0,1],[0,0],[0],[1]]</span><span>
+</span><span id="line-234"></span><span id="local-6989586621679067824"><span class="annot"><a href="EERTREE.Simple.html#subpalindromes"><span class="hs-identifier hs-type">subpalindromes</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">KnownNat</span></span><span> </span><span class="annot"><a href="#local-6989586621679067824"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="EERTREE.Symbol.html#Symbol"><span class="hs-identifier hs-type">Symbol</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679067824"><span class="hs-identifier hs-type">n</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="hs-special">[</span><span class="annot"><a href="EERTREE.Symbol.html#Symbol"><span class="hs-identifier hs-type">Symbol</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679067824"><span class="hs-identifier hs-type">n</span></a></span><span class="hs-special">]</span><span class="hs-special">]</span></span><span>
+</span><span id="line-235"></span><span id="subpalindromes"><span class="annot"><span class="annottext">subpalindromes :: forall (n :: Nat). KnownNat n =&gt; [Symbol n] -&gt; [[Symbol n]]
+</span><a href="EERTREE.Simple.html#subpalindromes"><span class="hs-identifier hs-var hs-var">subpalindromes</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Node n -&gt; [Symbol n]) -&gt; [Node n] -&gt; [[Symbol n]]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><span class="hs-identifier hs-var">map</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Seq (Symbol n) -&gt; [Symbol n]
+forall a. Seq a -&gt; [a]
+forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; [a]
+</span><span class="hs-identifier hs-var">F.toList</span></span><span> </span><span class="annot"><span class="annottext">(Seq (Symbol n) -&gt; [Symbol n])
+-&gt; (Node n -&gt; Seq (Symbol n)) -&gt; Node n -&gt; [Symbol n]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Node n -&gt; Seq (Symbol n)
+forall (n :: Nat). Node n -&gt; Seq (Symbol n)
+</span><a href="EERTREE.Node.html#value"><span class="hs-identifier hs-var">value</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">([Node n] -&gt; [[Symbol n]])
+-&gt; ([Symbol n] -&gt; [Node n]) -&gt; [Symbol n] -&gt; [[Symbol n]]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">[Node n] -&gt; [Node n]
+forall a. Eq a =&gt; [a] -&gt; [a]
+</span><span class="hs-identifier hs-var">nub</span></span><span> </span><span class="annot"><span class="annottext">([Node n] -&gt; [Node n])
+-&gt; ([Symbol n] -&gt; [Node n]) -&gt; [Symbol n] -&gt; [Node n]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">EERTREE n -&gt; [Node n]
+forall (n :: Nat). EERTREE n -&gt; [Node n]
+</span><a href="EERTREE.Simple.html#palindromes"><span class="hs-identifier hs-var">palindromes</span></a></span><span> </span><span class="annot"><span class="annottext">(EERTREE n -&gt; [Node n])
+-&gt; ([Symbol n] -&gt; EERTREE n) -&gt; [Symbol n] -&gt; [Node n]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">[Symbol n] -&gt; EERTREE n
+forall (n :: Nat). KnownNat n =&gt; [Symbol n] -&gt; EERTREE n
+</span><a href="EERTREE.Simple.html#eertree"><span class="hs-identifier hs-var">eertree</span></a></span><span>
+</span><span id="line-236"></span><span>
+</span><span id="line-237"></span><span class="hs-comment">-- | Compute first \(n\) elements of &lt;https://oeis.org/A216264 A216264 sequence&gt;</span><span>
+</span><span id="line-238"></span><span class="hs-comment">-- (binary rich strings count for \(n = 0, 1, \ldots\)).</span><span>
+</span><span id="line-239"></span><span class="hs-comment">--</span><span>
+</span><span id="line-240"></span><span class="hs-comment">-- For memory efficiency the whole sequence segment</span><span>
+</span><span id="line-241"></span><span class="hs-comment">-- is computed at once and not lazily as one might expect.</span><span>
+</span><span id="line-242"></span><span class="hs-comment">--</span><span>
+</span><span id="line-243"></span><span class="hs-comment">-- This should run in \(\mathcal{O}(n)\) memory</span><span>
+</span><span id="line-244"></span><span class="hs-comment">-- with garbage collector working normally.</span><span>
+</span><span id="line-245"></span><span class="hs-comment">--</span><span>
+</span><span id="line-246"></span><span class="hs-comment">-- &gt;&gt;&gt; a216264 15</span><span>
+</span><span id="line-247"></span><span class="hs-comment">-- [1,2,4,8,16,32,64,128,252,488,932,1756,3246,5916,10618]</span><span>
+</span><span id="line-248"></span><span class="annot"><a href="EERTREE.Simple.html#a216264"><span class="hs-identifier hs-type">a216264</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">]</span><span>
+</span><span id="line-249"></span><span id="a216264"><span class="annot"><span class="annottext">a216264 :: Int -&gt; [Int]
+</span><a href="EERTREE.Simple.html#a216264"><span class="hs-identifier hs-var hs-var">a216264</span></a></span></span><span> </span><span id="local-6989586621679068216"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679068216"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">Int -&gt; [Int] -&gt; [Int]
+forall a. a -&gt; [a] -&gt; [a]
+</span><span class="hs-glyph hs-var">:</span></span><span> </span><span class="annot"><span class="annottext">(Int -&gt; Int) -&gt; [Int] -&gt; [Int]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><span class="hs-identifier hs-var">map</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">*</span></span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">2</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[Int]
+</span><a href="#local-6989586621679068218"><span class="hs-identifier hs-var">halves</span></a></span><span>
+</span><span id="line-250"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-251"></span><span>    </span><span class="hs-comment">-- Observation: there is exactly the same number of rich strings</span><span>
+</span><span id="line-252"></span><span>    </span><span class="hs-comment">-- that start with 0 as there are those starting with 1.</span><span>
+</span><span id="line-253"></span><span>    </span><span class="hs-comment">-- That is why we can do half work (or 1/(alphabet size) in general)</span><span>
+</span><span id="line-254"></span><span>    </span><span class="hs-comment">-- and count rich strings faster.</span><span>
+</span><span id="line-255"></span><span>    </span><span id="local-6989586621679068218"><span class="annot"><span class="annottext">halves :: [Int]
+</span><a href="#local-6989586621679068218"><span class="hs-identifier hs-var hs-var">halves</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; EERTREE 2 -&gt; (EERTREE 2 -&gt; [EERTREE 2]) -&gt; [Int]
+forall a. Int -&gt; a -&gt; (a -&gt; [a]) -&gt; [Int]
+</span><a href="EERTREE.Simple.html#dfsCountLevels"><span class="hs-identifier hs-var">dfsCountLevels</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679068216"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-glyph hs-var">-</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Symbol 2 -&gt; EERTREE 2
+forall (n :: Nat). KnownNat n =&gt; Symbol n -&gt; EERTREE n
+</span><a href="EERTREE.Simple.html#singleton"><span class="hs-identifier hs-var">singleton</span></a></span><span> </span><span class="annot"><span class="annottext">Symbol 2
+</span><span class="hs-number">0</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall (n :: Nat). KnownNat n =&gt; EERTREE n -&gt; [EERTREE n]
+</span><a href="EERTREE.Simple.html#richSubEERTREEs"><span class="hs-identifier hs-var">richSubEERTREEs</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><span class="hs-number">2</span></span><span class="hs-special">)</span><span>
+</span><span id="line-256"></span><span>
+</span><span id="line-257"></span><span class="hs-comment">-- | Palindromic refrain:</span><span>
+</span><span id="line-258"></span><span class="hs-comment">-- for a given string S find a palindrome P maximizing the value</span><span>
+</span><span id="line-259"></span><span class="hs-comment">-- |P| * occ(S, P), where occ(S, P) is the number of occurences of P in S</span><span>
+</span><span id="line-260"></span><span class="hs-comment">--</span><span>
+</span><span id="line-261"></span><span class="hs-comment">-- &gt;&gt;&gt; palindromicRefrain (eertreeFromString @3 &quot;0102010&quot;)</span><span>
+</span><span id="line-262"></span><span class="hs-comment">-- (fromPalindrome [0,1,0,2,0,1,0],7)</span><span>
+</span><span id="line-263"></span><span class="hs-comment">--</span><span>
+</span><span id="line-264"></span><span class="hs-comment">-- &gt;&gt;&gt; palindromicRefrain (eertreeFromString @1 &quot;000&quot;)</span><span>
+</span><span id="line-265"></span><span class="hs-comment">-- (fromPalindrome [0,0],4)</span><span>
+</span><span id="line-266"></span><span id="local-6989586621679067832"><span class="annot"><a href="EERTREE.Simple.html#palindromicRefrain"><span class="hs-identifier hs-type">palindromicRefrain</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">KnownNat</span></span><span> </span><span class="annot"><a href="#local-6989586621679067832"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="EERTREE.Simple.html#EERTREE"><span class="hs-identifier hs-type">EERTREE</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679067832"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="EERTREE.Node.html#Node"><span class="hs-identifier hs-type">Node</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679067832"><span class="hs-identifier hs-type">n</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">)</span></span><span>
+</span><span id="line-267"></span><span id="palindromicRefrain"><span class="annot"><span class="annottext">palindromicRefrain :: forall (n :: Nat). KnownNat n =&gt; EERTREE n -&gt; (Node n, Int)
+</span><a href="EERTREE.Simple.html#palindromicRefrain"><span class="hs-identifier hs-var hs-var">palindromicRefrain</span></a></span></span><span> </span><span id="local-6989586621679068231"><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068231"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">((Node n, Int) -&gt; (Node n, Int) -&gt; Ordering)
+-&gt; [(Node n, Int)] -&gt; (Node n, Int)
+forall (t :: * -&gt; *) a.
+Foldable t =&gt;
+(a -&gt; a -&gt; Ordering) -&gt; t a -&gt; a
+</span><span class="hs-identifier hs-var">maximumBy</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">((Node n, Int) -&gt; Int)
+-&gt; (Node n, Int) -&gt; (Node n, Int) -&gt; Ordering
+forall a b. Ord a =&gt; (b -&gt; a) -&gt; b -&gt; b -&gt; Ordering
+</span><span class="hs-identifier hs-var">comparing</span></span><span> </span><span class="annot"><span class="annottext">(Node n, Int) -&gt; Int
+forall a b. (a, b) -&gt; b
+</span><span class="hs-identifier hs-var">snd</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Node n] -&gt; [Int] -&gt; [(Node n, Int)]
+forall a b. [a] -&gt; [b] -&gt; [(a, b)]
+</span><span class="hs-identifier hs-var">zip</span></span><span> </span><span class="annot"><span class="annottext">[Node n]
+</span><a href="#local-6989586621679068233"><span class="hs-identifier hs-var">unique</span></a></span><span> </span><span class="annot"><span class="annottext">[Int]
+</span><a href="#local-6989586621679068234"><span class="hs-identifier hs-var">refrain</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-268"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-269"></span><span>    </span><span class="hs-comment">-- | Count palindrome frequency</span><span>
+</span><span id="line-270"></span><span>    </span><span id="local-6989586621679068236"><span class="annot"><span class="annottext">occ :: Map Integer (Node n, Int)
+</span><a href="#local-6989586621679068236"><span class="hs-identifier hs-var hs-var">occ</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">EERTREE n -&gt; Map Integer (Node n, Int)
+forall (n :: Nat).
+KnownNat n =&gt;
+EERTREE n -&gt; Map Integer (Node n, Int)
+</span><a href="EERTREE.Simple.html#frequency%27"><span class="hs-identifier hs-var">frequency'</span></a></span><span> </span><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068231"><span class="hs-identifier hs-var">t</span></a></span><span>
+</span><span id="line-271"></span><span>
+</span><span id="line-272"></span><span>    </span><span class="hs-comment">-- | Unique palindromes</span><span>
+</span><span id="line-273"></span><span>    </span><span id="local-6989586621679068233"><span class="annot"><span class="annottext">unique :: [Node n]
+</span><a href="#local-6989586621679068233"><span class="hs-identifier hs-var hs-var">unique</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">((Node n, Int) -&gt; Node n) -&gt; [(Node n, Int)] -&gt; [Node n]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><span class="hs-identifier hs-var">map</span></span><span> </span><span class="annot"><span class="annottext">(Node n, Int) -&gt; Node n
+forall a b. (a, b) -&gt; a
+</span><span class="hs-identifier hs-var">fst</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Map Integer (Node n, Int) -&gt; [(Node n, Int)]
+forall k a. Map k a -&gt; [a]
+</span><span class="hs-identifier hs-var">Map.elems</span></span><span> </span><span class="annot"><span class="annottext">Map Integer (Node n, Int)
+</span><a href="#local-6989586621679068236"><span class="hs-identifier hs-var">occ</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-274"></span><span>
+</span><span id="line-275"></span><span>    </span><span class="hs-comment">-- | Calculate refrains</span><span>
+</span><span id="line-276"></span><span>    </span><span id="local-6989586621679068234"><span class="annot"><span class="annottext">refrain :: [Int]
+</span><a href="#local-6989586621679068234"><span class="hs-identifier hs-var hs-var">refrain</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">((Node n, Int) -&gt; Int) -&gt; [(Node n, Int)] -&gt; [Int]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><span class="hs-identifier hs-var">map</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="hs-special">(</span><span id="local-6989586621679068241"><span class="annot"><span class="annottext">Node n
+</span><a href="#local-6989586621679068241"><span class="hs-identifier hs-var">p</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679068242"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679068242"><span class="hs-identifier hs-var">f</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679068242"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">*</span></span><span> </span><span class="annot"><span class="annottext">Node n -&gt; Int
+forall (n :: Nat). Node n -&gt; Int
+</span><a href="EERTREE.Node.html#len"><span class="hs-identifier hs-var">len</span></a></span><span> </span><span class="annot"><span class="annottext">Node n
+</span><a href="#local-6989586621679068241"><span class="hs-identifier hs-var">p</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Map Integer (Node n, Int) -&gt; [(Node n, Int)]
+forall k a. Map k a -&gt; [a]
+</span><span class="hs-identifier hs-var">Map.elems</span></span><span> </span><span class="annot"><span class="annottext">Map Integer (Node n, Int)
+</span><a href="#local-6989586621679068236"><span class="hs-identifier hs-var">occ</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-277"></span><span>
+</span><span id="line-278"></span><span class="hs-comment">-- | Compute the number of occurences for each subpalindrome</span><span>
+</span><span id="line-279"></span><span class="hs-comment">--</span><span>
+</span><span id="line-280"></span><span class="hs-comment">-- &gt;&gt;&gt; frequency (eertreeFromString @2 &quot;10101&quot;)</span><span>
+</span><span id="line-281"></span><span class="hs-comment">-- [(fromPalindrome [1,0,1,0,1],1),(fromPalindrome [0,1,0],1),(fromPalindrome [1,0,1],2),(fromPalindrome [1],3),(fromPalindrome [0],2)]</span><span>
+</span><span id="line-282"></span><span id="local-6989586621679067848"><span class="annot"><a href="EERTREE.Simple.html#frequency"><span class="hs-identifier hs-type">frequency</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">KnownNat</span></span><span> </span><span class="annot"><a href="#local-6989586621679067848"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="EERTREE.Simple.html#EERTREE"><span class="hs-identifier hs-type">EERTREE</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679067848"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="EERTREE.Node.html#Node"><span class="hs-identifier hs-type">Node</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679067848"><span class="hs-identifier hs-type">n</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">)</span><span class="hs-special">]</span></span><span>
+</span><span id="line-283"></span><span id="frequency"><span class="annot"><span class="annottext">frequency :: forall (n :: Nat). KnownNat n =&gt; EERTREE n -&gt; [(Node n, Int)]
+</span><a href="EERTREE.Simple.html#frequency"><span class="hs-identifier hs-var hs-var">frequency</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Map Integer (Node n, Int) -&gt; [(Node n, Int)]
+forall k a. Map k a -&gt; [a]
+</span><span class="hs-identifier hs-var">Map.elems</span></span><span> </span><span class="annot"><span class="annottext">(Map Integer (Node n, Int) -&gt; [(Node n, Int)])
+-&gt; (EERTREE n -&gt; Map Integer (Node n, Int))
+-&gt; EERTREE n
+-&gt; [(Node n, Int)]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">EERTREE n -&gt; Map Integer (Node n, Int)
+forall (n :: Nat).
+KnownNat n =&gt;
+EERTREE n -&gt; Map Integer (Node n, Int)
+</span><a href="EERTREE.Simple.html#frequency%27"><span class="hs-identifier hs-var">frequency'</span></a></span><span>
+</span><span id="line-284"></span><span>
+</span><span id="line-285"></span><span class="hs-comment">-- | Compute the number of occurences for each subpalindrome.</span><span>
+</span><span id="line-286"></span><span class="hs-comment">-- Return @Map@ of frequences with Node index as a key.</span><span>
+</span><span id="line-287"></span><span class="hs-comment">--</span><span>
+</span><span id="line-288"></span><span class="hs-comment">-- &gt;&gt;&gt; frequency' (eertreeFromString @2 &quot;1000&quot;)</span><span>
+</span><span id="line-289"></span><span class="hs-comment">-- fromList [(-4,(fromPalindrome [0,0,0],1)),(-3,(fromPalindrome [1],1)),(-2,(fromPalindrome [0],3)),(2,(fromPalindrome [0,0],2))]</span><span>
+</span><span id="line-290"></span><span id="local-6989586621679067843"><span class="annot"><a href="EERTREE.Simple.html#frequency%27"><span class="hs-identifier hs-type">frequency'</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">KnownNat</span></span><span> </span><span class="annot"><a href="#local-6989586621679067843"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="EERTREE.Simple.html#EERTREE"><span class="hs-identifier hs-type">EERTREE</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679067843"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Map</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Integer</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="EERTREE.Node.html#Node"><span class="hs-identifier hs-type">Node</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679067843"><span class="hs-identifier hs-type">n</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">)</span></span><span>
+</span><span id="line-291"></span><span id="frequency%27"><span class="annot"><span class="annottext">frequency' :: forall (n :: Nat).
+KnownNat n =&gt;
+EERTREE n -&gt; Map Integer (Node n, Int)
+</span><a href="EERTREE.Simple.html#frequency%27"><span class="hs-identifier hs-var hs-var">frequency'</span></a></span></span><span> </span><span id="local-6989586621679068250"><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068250"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">((Node n, Int) -&gt; (Node n, Int) -&gt; (Node n, Int))
+-&gt; [(Integer, (Node n, Int))] -&gt; Map Integer (Node n, Int)
+forall k a. Ord k =&gt; (a -&gt; a -&gt; a) -&gt; [(k, a)] -&gt; Map k a
+</span><span class="hs-identifier hs-var">Map.fromListWith</span></span><span> </span><span class="annot"><span class="annottext">(Node n, Int) -&gt; (Node n, Int) -&gt; (Node n, Int)
+forall {b} {a} {a}. Num b =&gt; (a, b) -&gt; (a, b) -&gt; (a, b)
+</span><a href="#local-6989586621679068252"><span class="hs-identifier hs-var">combine</span></a></span><span> </span><span class="annot"><span class="annottext">[(Integer, (Node n, Int))]
+</span><a href="#local-6989586621679068253"><span class="hs-identifier hs-var">pals</span></a></span><span>
+</span><span id="line-292"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-293"></span><span>    </span><span id="local-6989586621679068257"><span class="annot"><span class="annottext">unfoldLinks :: Node n -&gt; [Node n]
+</span><a href="#local-6989586621679068257"><span class="hs-identifier hs-var hs-var">unfoldLinks</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Node n -&gt; Bool) -&gt; [Node n] -&gt; [Node n]
+forall a. (a -&gt; Bool) -&gt; [a] -&gt; [a]
+</span><span class="hs-identifier hs-var">takeWhile</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679068259"><span class="annot"><span class="annottext">Node n
+</span><a href="#local-6989586621679068259"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Node n -&gt; Int
+forall (n :: Nat). Node n -&gt; Int
+</span><a href="EERTREE.Node.html#len"><span class="hs-identifier hs-var">len</span></a></span><span> </span><span class="annot"><span class="annottext">Node n
+</span><a href="#local-6989586621679068259"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&gt;</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">([Node n] -&gt; [Node n])
+-&gt; (Node n -&gt; [Node n]) -&gt; Node n -&gt; [Node n]
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">(Node n -&gt; Node n) -&gt; Node n -&gt; [Node n]
+forall a. (a -&gt; a) -&gt; a -&gt; [a]
+</span><span class="hs-identifier hs-var">iterate</span></span><span> </span><span class="annot"><span class="annottext">Node n -&gt; Node n
+forall (n :: Nat). KnownNat n =&gt; Node n -&gt; Node n
+</span><a href="EERTREE.Node.html#link"><span class="hs-identifier hs-var">link</span></a></span><span>
+</span><span id="line-294"></span><span>
+</span><span id="line-295"></span><span>    </span><span class="hs-comment">-- Zip palindromes with their indexes</span><span>
+</span><span id="line-296"></span><span>    </span><span id="local-6989586621679068253"><span class="annot"><span class="annottext">pals :: [(Integer, (Node n, Int))]
+</span><a href="#local-6989586621679068253"><span class="hs-identifier hs-var hs-var">pals</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Node n -&gt; (Integer, (Node n, Int)))
+-&gt; [Node n] -&gt; [(Integer, (Node n, Int))]
+forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
+</span><span class="hs-identifier hs-var">map</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="hs-special">(</span><span id="local-6989586621679068265"><span class="annot"><span class="annottext">Node n
+</span><a href="#local-6989586621679068265"><span class="hs-identifier hs-var">p</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679068266"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679068266"><span class="hs-identifier hs-var">f</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Node n -&gt; Integer
+forall (n :: Nat). Node n -&gt; Integer
+</span><a href="EERTREE.Node.html#index"><span class="hs-identifier hs-var">index</span></a></span><span> </span><span class="annot"><span class="annottext">Node n
+</span><a href="#local-6989586621679068265"><span class="hs-identifier hs-var">p</span></a></span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Node n
+</span><a href="#local-6989586621679068265"><span class="hs-identifier hs-var">p</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679068266"><span class="hs-identifier hs-var">f</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">((Node n, Int) -&gt; (Integer, (Node n, Int)))
+-&gt; (Node n -&gt; (Node n, Int)) -&gt; Node n -&gt; (Integer, (Node n, Int))
+forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><span class="hs-operator hs-var">.</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679068268"><span class="annot"><span class="annottext">Node n
+</span><a href="#local-6989586621679068268"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Node n
+</span><a href="#local-6989586621679068268"><span class="hs-identifier hs-var">n</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Node n -&gt; [Node n]) -&gt; [Node n] -&gt; [Node n]
+forall (t :: * -&gt; *) a b. Foldable t =&gt; (a -&gt; [b]) -&gt; t a -&gt; [b]
+</span><span class="hs-identifier hs-var">concatMap</span></span><span> </span><span class="annot"><span class="annottext">Node n -&gt; [Node n]
+</span><a href="#local-6989586621679068257"><span class="hs-identifier hs-var">unfoldLinks</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">EERTREE n -&gt; [Node n]
+forall (n :: Nat). EERTREE n -&gt; [Node n]
+</span><a href="EERTREE.Simple.html#palindromes"><span class="hs-identifier hs-var">palindromes</span></a></span><span> </span><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068250"><span class="hs-identifier hs-var">t</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-297"></span><span>
+</span><span id="line-298"></span><span>    </span><span id="local-6989586621679068252"><span class="annot"><span class="annottext">combine :: (a, b) -&gt; (a, b) -&gt; (a, b)
+</span><a href="#local-6989586621679068252"><span class="hs-identifier hs-var hs-var">combine</span></a></span></span><span> </span><span id="local-6989586621679068272"><span class="annot"><span class="annottext">(a, b)
+</span><a href="#local-6989586621679068272"><span class="hs-identifier hs-var">pair1</span></a></span></span><span> </span><span id="local-6989586621679068273"><span class="annot"><span class="annottext">(a, b)
+</span><a href="#local-6989586621679068273"><span class="hs-identifier hs-var">pair2</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(a, b) -&gt; a
+forall a b. (a, b) -&gt; a
+</span><span class="hs-identifier hs-var">fst</span></span><span> </span><span class="annot"><span class="annottext">(a, b)
+</span><a href="#local-6989586621679068272"><span class="hs-identifier hs-var">pair1</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">(a, b) -&gt; b
+forall a b. (a, b) -&gt; b
+</span><span class="hs-identifier hs-var">snd</span></span><span> </span><span class="annot"><span class="annottext">(a, b)
+</span><a href="#local-6989586621679068272"><span class="hs-identifier hs-var">pair1</span></a></span><span> </span><span class="annot"><span class="annottext">b -&gt; b -&gt; b
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">+</span></span><span> </span><span class="annot"><span class="annottext">(a, b) -&gt; b
+forall a b. (a, b) -&gt; b
+</span><span class="hs-identifier hs-var">snd</span></span><span> </span><span class="annot"><span class="annottext">(a, b)
+</span><a href="#local-6989586621679068273"><span class="hs-identifier hs-var">pair2</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-299"></span><span>
+</span><span id="line-300"></span><span class="annot"><span class="hs-comment">-- * Helpers</span></span><span>
+</span><span id="line-301"></span><span>
+</span><span id="line-302"></span><span class="hs-comment">-- | Efficiently count nodes at every level of a tree using DFS.</span><span>
+</span><span id="line-303"></span><span class="hs-comment">--</span><span>
+</span><span id="line-304"></span><span class="hs-comment">-- Memory efficiency comes from the fact that in depth-first</span><span>
+</span><span id="line-305"></span><span class="hs-comment">-- traversal we don't have to store all nodes at a level</span><span>
+</span><span id="line-306"></span><span class="hs-comment">-- and only need to store a path from root to the current node.</span><span>
+</span><span id="line-307"></span><span id="local-6989586621679067830"><span class="annot"><a href="EERTREE.Simple.html#dfsCountLevels"><span class="hs-identifier hs-type">dfsCountLevels</span></a></span><span>
+</span><span id="line-308"></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span>          </span><span class="annot"><span class="hs-comment">-- ^ Number of levels to cover (max depth).</span></span><span>
+</span><span id="line-309"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679067830"><span class="hs-identifier hs-type">a</span></a></span><span>            </span><span class="annot"><span class="hs-comment">-- ^ Root.</span></span><span>
+</span><span id="line-310"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="#local-6989586621679067830"><span class="hs-identifier hs-type">a</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="#local-6989586621679067830"><span class="hs-identifier hs-type">a</span></a></span><span class="hs-special">]</span><span class="hs-special">)</span><span>   </span><span class="annot"><span class="hs-comment">-- ^ How to get subtrees.</span></span><span>
+</span><span id="line-311"></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">]</span></span><span>        </span><span class="annot"><span class="hs-comment">-- ^ Number of elements at every level.</span></span><span>
+</span><span id="line-312"></span><span id="dfsCountLevels"><span class="annot"><span class="annottext">dfsCountLevels :: forall a. Int -&gt; a -&gt; (a -&gt; [a]) -&gt; [Int]
+</span><a href="EERTREE.Simple.html#dfsCountLevels"><span class="hs-identifier hs-var hs-var">dfsCountLevels</span></a></span></span><span> </span><span id="local-6989586621679068274"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679068274"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span id="local-6989586621679068275"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679068275"><span class="hs-identifier hs-var">root</span></a></span></span><span> </span><span id="local-6989586621679068276"><span class="annot"><span class="annottext">a -&gt; [a]
+</span><a href="#local-6989586621679068276"><span class="hs-identifier hs-var">subtrees</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(forall s. ST s [Int]) -&gt; [Int]
+forall a. (forall s. ST s a) -&gt; a
+</span><span class="hs-identifier hs-var">runST</span></span><span> </span><span class="annot"><span class="annottext">((forall s. ST s [Int]) -&gt; [Int])
+-&gt; (forall s. ST s [Int]) -&gt; [Int]
+forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-313"></span><span>  </span><span id="local-6989586621679068293"><span class="annot"><span class="annottext">MVector s Int
+</span><a href="#local-6989586621679068293"><span class="hs-identifier hs-var">result</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; ST s (MVector (PrimState (ST s)) Int)
+forall (m :: * -&gt; *) a.
+(PrimMonad m, Unbox a) =&gt;
+Int -&gt; a -&gt; m (MVector (PrimState m) a)
+</span><span class="hs-identifier hs-var">MVector.replicate</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679068274"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-314"></span><span>  </span><span class="annot"><span class="annottext">MVector (PrimState (ST s)) Int -&gt; Int -&gt; a -&gt; ST s ()
+forall {m :: * -&gt; *} {a}.
+(PrimMonad m, Unbox a, Num a) =&gt;
+MVector (PrimState m) a -&gt; Int -&gt; a -&gt; m ()
+</span><a href="#local-6989586621679068295"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">MVector s Int
+MVector (PrimState (ST s)) Int
+</span><a href="#local-6989586621679068293"><span class="hs-identifier hs-var">result</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679068275"><span class="hs-identifier hs-var">root</span></a></span><span>
+</span><span id="line-315"></span><span>  </span><span class="annot"><span class="annottext">Vector Int -&gt; [Int]
+forall a. Unbox a =&gt; Vector a -&gt; [a]
+</span><span class="hs-identifier hs-var">UVector.toList</span></span><span> </span><span class="annot"><span class="annottext">(Vector Int -&gt; [Int]) -&gt; ST s (Vector Int) -&gt; ST s [Int]
+forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><span class="hs-operator hs-var">&lt;$&gt;</span></span><span> </span><span class="annot"><span class="annottext">MVector (PrimState (ST s)) Int -&gt; ST s (Vector Int)
+forall a (m :: * -&gt; *).
+(Unbox a, PrimMonad m) =&gt;
+MVector (PrimState m) a -&gt; m (Vector a)
+</span><span class="hs-identifier hs-var">UVector.freeze</span></span><span> </span><span class="annot"><span class="annottext">MVector s Int
+MVector (PrimState (ST s)) Int
+</span><a href="#local-6989586621679068293"><span class="hs-identifier hs-var">result</span></a></span><span>
+</span><span id="line-316"></span><span>    </span><span class="hs-keyword">where</span><span>
+</span><span id="line-317"></span><span>      </span><span id="local-6989586621679068295"><span class="annot"><span class="annottext">go :: MVector (PrimState m) a -&gt; Int -&gt; a -&gt; m ()
+</span><a href="#local-6989586621679068295"><span class="hs-identifier hs-var hs-var">go</span></a></span></span><span> </span><span id="local-6989586621679068332"><span class="annot"><span class="annottext">MVector (PrimState m) a
+</span><a href="#local-6989586621679068332"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span id="local-6989586621679068333"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679068333"><span class="hs-identifier hs-var">i</span></a></span></span><span> </span><span id="local-6989586621679068334"><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679068334"><span class="hs-identifier hs-var">t</span></a></span></span><span>
+</span><span id="line-318"></span><span>        </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679068333"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+forall a. Ord a =&gt; a -&gt; a -&gt; Bool
+</span><span class="hs-operator hs-var">&gt;=</span></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679068274"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">() -&gt; m ()
+forall a. a -&gt; m a
+forall (m :: * -&gt; *) a. Monad m =&gt; a -&gt; m a
+</span><span class="hs-identifier hs-var">return</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-319"></span><span>        </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span class="hs-identifier hs-var">otherwise</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-320"></span><span>          </span><span class="annot"><span class="annottext">MVector (PrimState m) a -&gt; (a -&gt; a) -&gt; Int -&gt; m ()
+forall (m :: * -&gt; *) a.
+(PrimMonad m, Unbox a) =&gt;
+MVector (PrimState m) a -&gt; (a -&gt; a) -&gt; Int -&gt; m ()
+</span><span class="hs-identifier hs-var">MVector.modify</span></span><span> </span><span class="annot"><span class="annottext">MVector (PrimState m) a
+</span><a href="#local-6989586621679068332"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; a -&gt; a
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">+</span></span><span class="annot"><span class="annottext">a
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679068333"><span class="hs-identifier hs-var">i</span></a></span><span>
+</span><span id="line-321"></span><span>          </span><span class="annot"><span class="annottext">(a -&gt; m ()) -&gt; [a] -&gt; m ()
+forall (t :: * -&gt; *) (m :: * -&gt; *) a b.
+(Foldable t, Monad m) =&gt;
+(a -&gt; m b) -&gt; t a -&gt; m ()
+</span><span class="hs-identifier hs-var">mapM_</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">MVector (PrimState m) a -&gt; Int -&gt; a -&gt; m ()
+</span><a href="#local-6989586621679068295"><span class="hs-identifier hs-var">go</span></a></span><span> </span><span class="annot"><span class="annottext">MVector (PrimState m) a
+</span><a href="#local-6989586621679068332"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679068333"><span class="hs-identifier hs-var">i</span></a></span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><span class="hs-operator hs-var">+</span></span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">a -&gt; [a]
+</span><a href="#local-6989586621679068276"><span class="hs-identifier hs-var">subtrees</span></a></span><span> </span><span class="annot"><span class="annottext">a
+</span><a href="#local-6989586621679068334"><span class="hs-identifier hs-var">t</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-322"></span><span>
+</span><span id="line-323"></span><span class="hs-comment">-- | Efficiently compute all rich eertrees that can be produced</span><span>
+</span><span id="line-324"></span><span class="hs-comment">-- from a given one by prepending a symbol to it.</span><span>
+</span><span id="line-325"></span><span class="hs-comment">--</span><span>
+</span><span id="line-326"></span><span class="hs-comment">-- Efficiency comes from the fact that we only need to check</span><span>
+</span><span id="line-327"></span><span class="hs-comment">-- that a new maximum prefix is a new palindrome.</span><span>
+</span><span id="line-328"></span><span class="annot"><a href="EERTREE.Simple.html#richSubEERTREEs"><span class="hs-identifier hs-type">richSubEERTREEs</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621679067831"><span class="annot"><a href="#local-6989586621679067831"><span class="hs-identifier hs-type">n</span></a></span></span><span class="hs-operator">.</span><span> </span><span class="annot"><span class="hs-identifier hs-type">KnownNat</span></span><span> </span><span class="annot"><a href="#local-6989586621679067831"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="EERTREE.Simple.html#EERTREE"><span class="hs-identifier hs-type">EERTREE</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679067831"><span class="hs-identifier hs-type">n</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="EERTREE.Simple.html#EERTREE"><span class="hs-identifier hs-type">EERTREE</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679067831"><span class="hs-identifier hs-type">n</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-329"></span><span id="richSubEERTREEs"><span class="annot"><span class="annottext">richSubEERTREEs :: forall (n :: Nat). KnownNat n =&gt; EERTREE n -&gt; [EERTREE n]
+</span><a href="EERTREE.Simple.html#richSubEERTREEs"><span class="hs-identifier hs-var hs-var">richSubEERTREEs</span></a></span></span><span> </span><span id="local-6989586621679068341"><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068341"><span class="hs-identifier hs-var">t</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-330"></span><span>  </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068342"><span class="hs-identifier hs-var">t'</span></a></span><span>
+</span><span id="line-331"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="local-6989586621679068343"><span class="annot"><span class="annottext">Symbol n
+</span><a href="#local-6989586621679068343"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">forall (n :: Nat). KnownNat n =&gt; [Symbol n]
+</span><a href="EERTREE.Symbol.html#alphabet"><span class="hs-identifier hs-var">alphabet</span></a></span><span> </span><span class="hs-glyph">@</span><span class="annot"><a href="#local-6989586621679067831"><span class="hs-identifier hs-type">n</span></a></span><span>
+</span><span id="line-332"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621679068342"><span class="annot"><span class="annottext">t' :: EERTREE n
+</span><a href="#local-6989586621679068342"><span class="hs-identifier hs-var hs-var">t'</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Symbol n -&gt; EERTREE n -&gt; EERTREE n
+forall (n :: Nat). KnownNat n =&gt; Symbol n -&gt; EERTREE n -&gt; EERTREE n
+</span><a href="EERTREE.Simple.html#prepend"><span class="hs-identifier hs-var">prepend</span></a></span><span> </span><span class="annot"><span class="annottext">Symbol n
+</span><a href="#local-6989586621679068343"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068341"><span class="hs-identifier hs-var">t</span></a></span><span>
+</span><span id="line-333"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">EERTREE n -&gt; Node n
+forall (n :: Nat). EERTREE n -&gt; Node n
+</span><a href="EERTREE.Simple.html#maxPrefix"><span class="hs-identifier hs-var">maxPrefix</span></a></span><span> </span><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068342"><span class="hs-identifier hs-var">t'</span></a></span><span> </span><span class="annot"><span class="annottext">Node n -&gt; [Node n] -&gt; Bool
+forall (t :: * -&gt; *) a. (Foldable t, Eq a) =&gt; a -&gt; t a -&gt; Bool
+</span><span class="hs-operator hs-var">`notElem`</span></span><span> </span><span class="annot"><span class="annottext">EERTREE n -&gt; [Node n]
+forall (n :: Nat). EERTREE n -&gt; [Node n]
+</span><a href="EERTREE.Simple.html#palindromes"><span class="hs-identifier hs-var">palindromes</span></a></span><span> </span><span class="annot"><span class="annottext">EERTREE n
+</span><a href="#local-6989586621679068341"><span class="hs-identifier hs-var">t</span></a></span><span>
+</span><span id="line-334"></span><span>  </span><span class="hs-special">]</span><span>
+</span><span id="line-335"></span></pre></body></html>
