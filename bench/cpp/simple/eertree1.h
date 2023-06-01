@@ -75,7 +75,7 @@ public:
 
         // Creating new Node
         pointer += 1;
-
+        // std::cout<<"pointer is " << pointer << '\n';
         // Making new Node as child of X with
         tree[tmp].edges[s[idx] - 'a'] = pointer;
         tree[pointer].len = tree[tmp].len + 2;
@@ -127,7 +127,7 @@ public:
             std::cout << std::endl;
         }
     }
-
+    
     void palindromes(const std::string &s, std::string &result)
     {
         for (int i = 3; i <= pointer; i++)
@@ -140,30 +140,3 @@ public:
         }
     }
 };
-
-/* Main needs to be commented out to be able to run it from Main.hs */
-// int main(int argc, char *argv[])
-// {
-//     if (argc == 2)
-//     {
-//         std::string s = argv[1];
-
-//         std::cout << s << std::endl;
-
-//         EERTREE tree;
-//         for (int i = 0; i < s.size(); ++i)
-//             tree.insert(s, i);
-
-//         tree.printPalindromes(s);
-
-//         // std::string result;
-//         // tree.palindromes(s, result);
-//         // std::cout << result << std::endl;
-//     }
-//     else
-//     {
-//         std::cout << "No string has been passed." << std::endl;
-//     }
-
-//     return 0;
-// }

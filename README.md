@@ -31,3 +31,16 @@ stack build
 
 This should install all dependencies,
 including a proper version of GHC if needed.
+
+### Benchmarks
+To run C++ benchmarks:
+Go to bench/cpp directory and run
+```sh
+make run
+```
+Alternatively, you can use 
+```sh
+make clean
+make build
+```
+to clean and build only.

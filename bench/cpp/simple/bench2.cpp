@@ -3,7 +3,7 @@
 * https://github.com/google/benchmark
 */
 #include <benchmark/benchmark.h>
-#include "eertree.cpp"
+#include "eertree2.h"
 
 #include <iostream>
 #include <ctime>
@@ -40,12 +40,8 @@ static std::string randomString(const int len)
 
 static void palindromes(const std::string s)
 {
-    EERTREE tree;
-    for (int i = 0; i < s.size(); ++i)
-        tree.insert(s, i);
-
-    std::string result;
-    tree.palindromes(s, result);
+    auto tree = new EERTREE(s);
+    auto sub_palindromes = tree->subPalindromes();
 }
 
 static void bench(benchmark::State &state)
@@ -71,12 +67,6 @@ BENCHMARK(bench)
     ->Unit(benchmark::kSecond); // time in seconds
 
 BENCHMARK_MAIN();
-
-/*
-Run benchmarks:
-g++ bench.cpp -std=c++11 -isystem ../../../benchmark/include -Lbenchmark/build/src -lbenchmark -lpthread
-./a.out
-*/
 
 // int main(int argc, char *argv[])
 // {
