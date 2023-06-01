@@ -23,7 +23,7 @@ set(SOURCES
 ./simple/eertree2.h
 ./simple/bench1.cpp
 ./simple/bench2.cpp
-# ./A216264/eertree1.h
+./A216264/eertree1.h
 ./A216264/eertree2.h
 # ./A216264/bench1.cpp
 ./A216264/bench2.cpp
