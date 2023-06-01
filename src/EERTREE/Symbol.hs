@@ -6,9 +6,9 @@
 {-# LANGUAGE TypeApplications           #-}
 module EERTREE.Symbol where
 
+import           Control.DeepSeq
 import           Data.Proxy
 import           GHC.TypeLits    (KnownNat, Nat, natVal)
-import           Control.DeepSeq
 
 -- $setup
 -- >>> :set -XTypeApplications -XDataKinds
@@ -34,12 +34,3 @@ instance Num (Symbol n) where
   signum  = error "operation signum is not defined for Symbol"
   negate  = error "operation negate is not defined for Symbol"
   (-)     = error "operation - is not defined for Symbol"
-
--- | Symbols of an alphabet of size @n@.
---
--- >>> alphabet @2
--- [0,1]
--- >>> alphabet @10
--- [0,1,2,3,4,5,6,7,8,9]
-alphabet :: forall n. KnownNat n => [Symbol n]
-alphabet = [minBound..maxBound]

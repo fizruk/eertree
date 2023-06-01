@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE DeriveGeneric       #-}
+{-# LANGUAGE FlexibleInstances   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
 module EERTREE.Simple where
@@ -21,6 +22,7 @@ import           Control.Monad.ST            (runST)
 import qualified Data.Vector.Unboxed         as UVector
 import qualified Data.Vector.Unboxed.Mutable as MVector
 
+import           EERTREE.Alphabet.Class
 import           EERTREE.Node
 import           EERTREE.Symbol
 
@@ -28,25 +30,25 @@ import           EERTREE.Symbol
 -- >>> :set -XTypeApplications -XDataKinds -XOverloadedStrings
 
 -- | A palindromic tree for some string with auxillary information.
-data EERTREE n = EERTREE
-  { strLen            :: !Int           -- ^ Length of the analysed string.
-  , maxPrefix         :: Node n         -- ^ Maximum palindromic prefix.
-  , maxSuffix         :: Node n         -- ^ Maximum palindromic suffix
-  , strReversedPrefix :: Seq (Symbol n) -- ^ Prefix, preceding maximum palindromic suffix
-  , strSuffix         :: Seq (Symbol n) -- ^ Suffix, following maximum palindromic prefix.
-  , palindromes       :: [Node n]       -- ^ Accumulated list of encountered palindromes.
+data EERTREE a = EERTREE
+  { strLen            :: !Int                     -- ^ Length of the analysed string.
+  , maxPrefix         :: Node (AlphabetSize a)    -- ^ Maximum palindromic prefix.
+  , maxSuffix         :: Node (AlphabetSize a)    -- ^ Maximum palindromic suffix
+  , strReversedPrefix :: Seq a                    -- ^ Prefix, preceding maximum palindromic suffix
+  , strSuffix         :: Seq a                    -- ^ Suffix, following maximum palindromic prefix.
+  , palindromes       :: [Node (AlphabetSize a)]  -- ^ Accumulated list of encountered palindromes.
   } deriving (Eq, Show, Generic)
-instance NFData (EERTREE n)
+instance NFData a => NFData (EERTREE a)
 
-instance KnownNat n => IsString (EERTREE n) where
+instance KnownNat n => IsString (EERTREE (Symbol n)) where
   fromString = eertreeFromString
 
 -- | An empty eertree.
-empty :: forall n. KnownNat n => EERTREE n
+empty :: forall a. Alphabet a => EERTREE a
 empty = EERTREE
   { strLen             = 0
-  , maxPrefix          = evenNode @n
-  , maxSuffix          = evenNode @n
+  , maxPrefix          = evenNode @(AlphabetSize a)
+  , maxSuffix          = evenNode @(AlphabetSize a)
   , strReversedPrefix  = Seq.empty
   , strSuffix          = Seq.empty
   , palindromes        = []
@@ -54,30 +56,30 @@ empty = EERTREE
 
 -- | An eertree for a singleton string.
 --
--- >>> fromEERTREE (singleton @2 0)
+-- >>> fromEERTREE (singleton @(Symbol 2) 0)
 -- [0]
-singleton :: KnownNat n => Symbol n -> EERTREE n
+singleton :: Alphabet a => a -> EERTREE a
 singleton c = prepend c empty
 
 -- | Analyse a string by building an eertree.
 --
--- >>> fromEERTREE (eertree @2 [0,1,0,0,1])
+-- >>> fromEERTREE (eertree @(Symbol 2) [0,1,0,0,1])
 -- [0,1,0,0,1]
-eertree :: KnownNat n => [Symbol n] -> EERTREE n
+eertree :: Alphabet a => [a] -> EERTREE a
 eertree = foldr prepend empty
 
 -- | Build an eertree from string
 --
--- >>> eertreeFromString @2 "01001" == eertree @2 [0,1,0,0,1]
+-- >>> eertreeFromString @2 "01001" == eertree @(Symbol 2) [0,1,0,0,1]
 -- True
-eertreeFromString :: KnownNat n => String -> EERTREE n
+eertreeFromString :: KnownNat n => String -> EERTREE (Symbol n)
 eertreeFromString = foldr (prepend . Symbol . digitToInt) empty
 
 -- | EERTREE of a reversed string
 --
--- >> reverseEERTREE @2 "01001" == [1,0,0,1,0]
+-- >> reverseEERTREE @(Symbol 2) "01001" == [1,0,0,1,0]
 -- True
-reverseEERTREE :: KnownNat n => EERTREE n -> EERTREE n
+reverseEERTREE :: Alphabet a => EERTREE a -> EERTREE a
 reverseEERTREE t = t { maxPrefix          = maxSuffix t
                      , maxSuffix          = maxPrefix t
                      , strReversedPrefix  = strSuffix t
@@ -86,33 +88,33 @@ reverseEERTREE t = t { maxPrefix          = maxSuffix t
 
 -- | Get the string back from an eertree.
 --
--- >>> fromEERTREE @2 "01001"
+-- >>> fromEERTREE @(Symbol 2) "01001"
 -- [0,1,0,0,1]
-fromEERTREE :: EERTREE n -> [Symbol n]
+fromEERTREE :: Alphabet a => EERTREE a -> [a]
 fromEERTREE = F.toList . eertreeToSeq
 
-eertreeToSeq :: EERTREE n -> Seq (Symbol n)
-eertreeToSeq t = value (maxPrefix t) <> strSuffix t
+eertreeToSeq :: Alphabet a => EERTREE a -> Seq a
+eertreeToSeq t = (toAlphabet <$> value (maxPrefix t)) <> strSuffix t
 
 -- | Get the reversed string from an eertree
 --
--- >>> reverseFromEERTREE @2 "01001"
+-- >>> reverseFromEERTREE @(Symbol 2) "01001"
 -- [1,0,0,1,0]
-reverseFromEERTREE :: EERTREE n -> [Symbol n]
+reverseFromEERTREE :: Alphabet a => EERTREE a -> [a]
 reverseFromEERTREE = F.toList . eertreeToSeqReversed
 
-eertreeToSeqReversed :: EERTREE n -> Seq (Symbol n)
-eertreeToSeqReversed t = value (maxSuffix t) <> strReversedPrefix t
+eertreeToSeqReversed :: Alphabet a => EERTREE a -> Seq a
+eertreeToSeqReversed t = (toAlphabet <$> value (maxSuffix t)) <> strReversedPrefix t
 
 -- | Add a symbol to the beginning of a string
 -- corresponding to an eertree.
 --
--- >>> fromEERTREE (prepend 0 (eertreeFromString @2 "01001"))
+-- >>> fromEERTREE @(Symbol 2) (prepend 0 "01001")
 -- [0,0,1,0,0,1]
-prepend :: KnownNat n => Symbol n -> EERTREE n -> EERTREE n
+prepend :: Alphabet a => a -> EERTREE a -> EERTREE a
 prepend c t =
   case Seq.viewl (strSuffix t) of
-    c' Seq.:< cs | c == c' -> EERTREE
+    c' Seq.:< cs | c `isComplementOf` c' -> EERTREE
       { strLen             = strLen t + 1
       , maxPrefix          = newMaxPrefix
       , maxSuffix          = if null cs then newMaxPrefix else maxSuffix t
@@ -120,9 +122,9 @@ prepend c t =
       , strSuffix          = cs
       , palindromes        = newMaxPrefix : palindromes t
       } where
-        newMaxPrefix = edge c (maxPrefix t)
+        newMaxPrefix = edge (fromAlphabet c) (maxPrefix t)
     _ ->
-      case newSuffixOf c (maxPrefix t) of
+      case newSuffixOf (fromAlphabet c) (maxPrefix t) of
         newMaxPrefix -> EERTREE
           { strLen             = strLen t + 1
           , maxPrefix          = newMaxPrefix
@@ -131,25 +133,25 @@ prepend c t =
           , strSuffix          = newStrSuffix
           , palindromes        = newMaxPrefix : palindromes t
           } where
-              newStrSuffix = Seq.drop (n - 1) (value (maxPrefix t)) <> strSuffix t
+              newStrSuffix = Seq.drop (n - 1) (toAlphabet <$> value (maxPrefix t)) <> strSuffix t
               n = len newMaxPrefix
 
 -- | Add a symbol to the end of a string
 -- corresponding to an eertree
 --
--- >>> fromEERTREE (append 0 (eertreeFromString @2 "01001"))
+-- >>> fromEERTREE @(Symbol 2) (append 0 "01001")
 -- [0,1,0,0,1,0]
-append :: KnownNat n => Symbol n -> EERTREE n -> EERTREE n
+append :: Alphabet a => a -> EERTREE a -> EERTREE a
 append c t = reverseEERTREE (prepend c (reverseEERTREE t))
 
 -- | Merge two eertrees in O(1) on average
 --
--- >>> fromEERTREE (merge @2 "0110100" "11001001")
+-- >>> fromEERTREE (merge @(Symbol 2) "0110100" "11001001")
 -- [0,1,1,0,1,0,0,1,1,0,0,1,0,0,1]
 --
--- >>> fromEERTREE (merge @2 "10010011" "0010110")
+-- >>> fromEERTREE (merge @(Symbol 2) "10010011" "0010110")
 -- [1,0,0,1,0,0,1,1,0,0,1,0,1,1,0]
-merge :: KnownNat n => EERTREE n -> EERTREE n -> EERTREE n
+merge :: forall a. Alphabet a => EERTREE a -> EERTREE a -> EERTREE a
 merge t1 t2
   | strLen t1 <= strLen t2 = mergeLeft  s1 t2 []
   | otherwise              = mergeRight t1 s2 []
@@ -159,10 +161,12 @@ merge t1 t2
       c2 = fromIntegral (strLen t1) + fromIntegral (len (maxPrefix t2)) / 2
 
       -- | Strings representing the eertrees
+      s1, s2 :: Seq a
       s1 = eertreeToSeqReversed t1
       s2 = eertreeToSeq t2
 
       -- | Merge by prepending symbols to `t2`
+      mergeLeft :: Seq a -> EERTREE a -> [Node (AlphabetSize a)] -> EERTREE a
       mergeLeft s1' t2' pals
         | null s1'           = t2'
         | c1 <= newPalCenter = mergeLeft cs (prepend c t2') (newPal : pals)
@@ -175,18 +179,20 @@ merge t1 t2
         where
           -- | Symbol to prepend
           (cs, c) = case Seq.viewl s1' of
-                      Seq.EmptyL  -> (Seq.empty, Symbol 0)
+                      Seq.EmptyL  -> (Seq.empty, error "impossible?!")
                       x Seq.:< xs -> (xs, x)
 
           -- | New palindrome
           newPal = case Seq.viewl (strSuffix t2') of
-                     x Seq.:< _ | c == x -> edge c (maxPrefix t2')
-                     _                   -> newSuffixOf c (maxPrefix t2')
+                     x Seq.:< _ | c `isComplementOf` x
+                        -> edge (fromAlphabet c) (maxPrefix t2')
+                     _  -> newSuffixOf (fromAlphabet c) (maxPrefix t2')
 
           -- | Center of a new palindrome
           newPalCenter = fromIntegral (length s1') + fromIntegral (len newPal) / 2
 
       -- | Merge by appending symbols to `t1`
+      mergeRight :: EERTREE a -> Seq a -> [Node (AlphabetSize a)] -> EERTREE a
       mergeRight t1' s2' pals
         | null s2'           = t1'
         | newPalCenter <= c2 = mergeRight (append c t1') cs (newPal : pals)
@@ -199,25 +205,25 @@ merge t1 t2
         where
           -- | Symbol to append
           (c, cs) = case Seq.viewl s2' of
-                      Seq.EmptyL  -> (Symbol 0, Seq.empty)
+                      Seq.EmptyL  -> (error "impossible?!", Seq.empty)
                       x Seq.:< xs -> (x, xs)
 
           -- | New palindrome
           newPal = case Seq.viewl (strReversedPrefix t1') of
-                     x Seq.:< _ | c == x -> edge c (maxSuffix t1')
-                     _                   -> newSuffixOf c (maxSuffix t1')
+                     x Seq.:< _ | c == x -> edge (fromAlphabet c) (maxSuffix t1')
+                     _                   -> newSuffixOf (fromAlphabet c) (maxSuffix t1')
 
           -- | Center of a new palindrome
           newPalCenter = fromIntegral (strLen t1') - fromIntegral (len newPal) / 2
 
 -- | Merge two eertrees in min(|S1|, |S2|)
 --
--- >>> fromEERTREE (mergeLinear @2 "0110100" "11001001")
+-- >>> fromEERTREE (mergeLinear @(Symbol 2) "0110100" "11001001")
 -- [0,1,1,0,1,0,0,1,1,0,0,1,0,0,1]
 --
--- >>> fromEERTREE (mergeLinear @2 "10010011" "0010110")
+-- >>> fromEERTREE (mergeLinear @(Symbol 2) "10010011" "0010110")
 -- [1,0,0,1,0,0,1,1,0,0,1,0,1,1,0]
-mergeLinear :: KnownNat n => EERTREE n -> EERTREE n -> EERTREE n
+mergeLinear :: Alphabet a => EERTREE a -> EERTREE a -> EERTREE a
 mergeLinear t1 t2
   | strLen t1 < strLen t2 = foldr prepend t2 s1
   | otherwise             = foldr append t1 s2
@@ -229,10 +235,10 @@ mergeLinear t1 t2
 
 -- | Unique subpalindromes of a string.
 --
--- >>> subpalindromes @2 [0,1,0,0,1]
+-- >>> subpalindromes @(Symbol 2) [0,1,0,0,1]
 -- [[0,1,0],[1,0,0,1],[0,0],[0],[1]]
-subpalindromes :: KnownNat n => [Symbol n] -> [[Symbol n]]
-subpalindromes = map (F.toList . value) . nub . palindromes . eertree
+subpalindromes :: Alphabet a => [a] -> [[a]]
+subpalindromes = map (fmap toAlphabet . F.toList . value) . nub . palindromes . eertree
 
 -- | Compute first \(n\) elements of <https://oeis.org/A216264 A216264 sequence>
 -- (binary rich strings count for \(n = 0, 1, \ldots\)).
@@ -252,18 +258,18 @@ a216264 n = 1 : map (*2) halves
     -- that start with 0 as there are those starting with 1.
     -- That is why we can do half work (or 1/(alphabet size) in general)
     -- and count rich strings faster.
-    halves = dfsCountLevels (n - 1) (singleton 0) (richSubEERTREEs @2)
+    halves = dfsCountLevels (n - 1) (singleton 0) (richSubEERTREEs @(Symbol 2))
 
 -- | Palindromic refrain:
 -- for a given string S find a palindrome P maximizing the value
 -- |P| * occ(S, P), where occ(S, P) is the number of occurences of P in S
 --
--- >>> palindromicRefrain (eertreeFromString @3 "0102010")
+-- >>> palindromicRefrain @(Symbol 3) "0102010"
 -- (fromPalindrome [0,1,0,2,0,1,0],7)
 --
--- >>> palindromicRefrain (eertreeFromString @1 "000")
+-- >>> palindromicRefrain @(Symbol 1) "000"
 -- (fromPalindrome [0,0],4)
-palindromicRefrain :: KnownNat n => EERTREE n -> (Node n, Int)
+palindromicRefrain :: Alphabet a => EERTREE a -> (Node (AlphabetSize a), Int)
 palindromicRefrain t = maximumBy (comparing snd) (zip unique refrain)
   where
     -- | Count palindrome frequency
@@ -277,17 +283,17 @@ palindromicRefrain t = maximumBy (comparing snd) (zip unique refrain)
 
 -- | Compute the number of occurences for each subpalindrome
 --
--- >>> frequency (eertreeFromString @2 "10101")
+-- >>> frequency @(Symbol 2) "10101"
 -- [(fromPalindrome [1,0,1,0,1],1),(fromPalindrome [0,1,0],1),(fromPalindrome [1,0,1],2),(fromPalindrome [1],3),(fromPalindrome [0],2)]
-frequency :: KnownNat n => EERTREE n -> [(Node n, Int)]
+frequency :: Alphabet a => EERTREE a -> [(Node (AlphabetSize a), Int)]
 frequency = Map.elems . frequency'
 
 -- | Compute the number of occurences for each subpalindrome.
 -- Return @Map@ of frequences with Node index as a key.
 --
--- >>> frequency' (eertreeFromString @2 "1000")
+-- >>> frequency' @(Symbol 2) "1000"
 -- fromList [(-4,(fromPalindrome [0,0,0],1)),(-3,(fromPalindrome [1],1)),(-2,(fromPalindrome [0],3)),(2,(fromPalindrome [0,0],2))]
-frequency' :: KnownNat n => EERTREE n -> Map Integer (Node n, Int)
+frequency' :: Alphabet a => EERTREE a -> Map Integer (Node (AlphabetSize a), Int)
 frequency' t = Map.fromListWith combine pals
   where
     unfoldLinks = takeWhile (\n -> len n > 0) . iterate link
@@ -325,10 +331,10 @@ dfsCountLevels k root subtrees = runST $ do
 --
 -- Efficiency comes from the fact that we only need to check
 -- that a new maximum prefix is a new palindrome.
-richSubEERTREEs :: forall n. KnownNat n => EERTREE n -> [EERTREE n]
+richSubEERTREEs :: forall a. Alphabet a => EERTREE a -> [EERTREE a]
 richSubEERTREEs t =
   [ t'
-  | c <- alphabet @n
+  | c <- alphabet @a
   , let t' = prepend c t
   , maxPrefix t' `notElem` palindromes t
   ]

@@ -2,10 +2,11 @@
 {-# LANGUAGE TypeApplications    #-}
 module EERTREE.Random where
 
-import           Control.Monad   (replicateM)
-import           Data.Proxy      (Proxy)
-import           GHC.TypeLits    (KnownNat)
+import           Control.Monad          (replicateM)
+import           Data.Proxy             (Proxy)
+import           GHC.TypeLits           (KnownNat)
 
+import           EERTREE.Alphabet.Class (alphabet)
 import           EERTREE.Simple
 import           EERTREE.Symbol
 
@@ -26,14 +27,14 @@ randomSymbols :: KnownNat n => Int -> Gen [Symbol n]
 randomSymbols len = replicateM len (elements alphabet)
 
 -- | Generator for eertree from random list of symbols of length @len@
-randomEERTREE :: KnownNat n => Int -> Gen (EERTREE n)
+randomEERTREE :: KnownNat n => Int -> Gen (EERTREE (Symbol n))
 randomEERTREE len = do
   symbols <- randomSymbols len
   let t = eertree symbols
   return t
 
 -- | Generate pair of random eertrees of lengths @len1@ and @len2@
-randomEERTREEpairIO :: KnownNat n => Int -> Int -> IO (EERTREE n, EERTREE n)
+randomEERTREEpairIO :: KnownNat n => Int -> Int -> IO (EERTREE (Symbol n), EERTREE (Symbol n))
 randomEERTREEpairIO len1 len2 = do
     t1 <- generate (randomEERTREE len1)
     t2 <- generate (randomEERTREE len2)
