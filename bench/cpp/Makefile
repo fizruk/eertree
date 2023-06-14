@@ -22,5 +22,5 @@ build/all: clean
 run: build
 	./build/bench1
 	./build/bench2
-	# ./build/bench3
+	./build/bench3
 	./build/bench4

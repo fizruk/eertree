@@ -1,12 +1,11 @@
 /*
  * Taken and adapted from https://www.geeksforgeeks.org/palindromic-tree-introduction-implementation/,
- * June 2021, for the needs of the comparative benchmarking.
- * 
- * C++ 11 code to construct an EERTREE.
+ * This implementation has an added deleteLast functionality, that's used to reset the tree from a 
+ * certain index in the string.
  */
 #include <iostream>
 #include <string>
-
+#include <cmath>
 #define N 10000
 
 struct Node
@@ -24,7 +23,9 @@ private:
     Node root1;
     Node root2;
     Node tree[N];
-
+    bool addedNewNode[N];
+    int myTmp[N];
+    int myCurrent[N];
     int current;
     int pointer;
 
@@ -52,28 +53,27 @@ public:
         * iterate down the suffix link of current node to
         * find X 
         */
+        addedNewNode[idx] = false;
         int tmp = current;
         while (true)
         {
             int currentLen = tree[tmp].len;
             if (idx - currentLen >= 1 and s[idx] == s[idx - currentLen - 1])
                 break;
+            if(tmp == 0 && currentLen == 0)
+                break;
             tmp = tree[tmp].suffix;
         }
+        // store the initial state of tmp and current for future deletion purposes.
+        myTmp[idx] = tmp;
+        myCurrent[idx] = current;
 
-        /* 
-        * Now we have found X
-        * X = string at Node tmp
-        * Check: if s[idx] X s[idx] already exists or not 
-        */
         if (tree[tmp].edges[s[idx] - 'a'] != 0)
         {
-            std::cout<<"okay i just don't even insert it\n";
-            // s[idx] X s[idx] already exists in the tree
             current = tree[tmp].edges[s[idx] - 'a'];
             return;
         }
-
+        addedNewNode[idx] = true;
         // Creating new Node
         pointer += 1;
         // Making new Node as child of X with
@@ -94,10 +94,6 @@ public:
         current = pointer;
         if (tree[current].len == 1)
         {
-            /*
-            * If new palindrome's length is 1,
-            * make its suffix link to be null string
-            */
             tree[current].suffix = 2;
             return;
         }
@@ -108,35 +104,33 @@ public:
                 break;
             tmp = tree[tmp].suffix;
         }
-
         /*
         * Now we have found string Y
         * linking current Nodes suffix link with s[idx]+Y+s[idx]
         */
         tree[current].suffix = tree[tmp].edges[s[idx] - 'a'];
     }
-
     void deleteLast(const std::string s, int idx)
     {
-        // Get parent
-        int tmp = current - 1;
-        while (true)
-        {
-            int currentLen = tree[tmp].len;
-            if (idx - currentLen >= 1 && s[idx] == s[idx - currentLen - 1])
-                break;
-            tmp = tree[tmp].suffix;
-        }
-        // Check if the edge doesn't exist already
-        if (tree[tmp].edges[s[idx] - 'a'] == 0)
-        {
+        // No deletion is necessary
+        if(!addedNewNode[idx]){
+            current = myCurrent[idx];
             return;
         }
-        // Remove edge
+ 
+        int tmp = myTmp[idx];
         tree[tmp].edges[s[idx] - 'a'] = 0;
-        // Removing last node, pointing to earlier one
-        pointer--;
-        current = pointer;
+        // Deleting new node
+        pointer -= 1;
+        current = myCurrent[idx];
+        addedNewNode[idx] = false;
+    }
+    
+    void resetFromNode(int index, std::string preDeletion)
+    {   
+        for (int i = preDeletion.size() - 1; i >= index; i--){
+            this->deleteLast(preDeletion, i);
+        }
     }
 
     void printPalindromes(const std::string &s)
@@ -162,14 +156,13 @@ public:
         }
     }
     void palindromes_n(const std::string& s, int& NP) {
-        std::set<std::string> uniquePalindromes; 
+        NP = 0;
         for (int i = 3; i <= pointer; i++) {
             std::string palindrome = "";
             for (int j = tree[i].start; j <= tree[i].end; j++) {
                 palindrome += s[j];
             }
-            uniquePalindromes.insert(palindrome);
+            NP += 1;
         }
-        NP = uniquePalindromes.size();
     }
 };

@@ -2,7 +2,8 @@
 * Taken and adapted from https://rosettacode.org/wiki/Eertree
 * May 2023
 * C++11 code to construct an EERTREE
-* This is a naive implementation that uses a new tree for every string.
+* This is a naive implementation for computing the number of 
+* rich strings that uses a new tree for every string.
 * It does not utilize past computation, and individually checks for rich strings.
 */
 
@@ -12,6 +13,15 @@
 #include <vector>
 constexpr int evenRoot = 0;
 constexpr int oddRoot = 1;
+
+static void AllStrings(std::vector<std::string>* strings, std::string str, const int len){
+    if(str.size() == len){
+        strings->push_back(str);
+        return;
+    }
+    AllStrings(strings, str + "0", len);
+    AllStrings(strings, str + "1", len);
+}
 
 struct Node {
     int length;
