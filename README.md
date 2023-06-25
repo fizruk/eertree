@@ -44,5 +44,5 @@ make clean
 make build
 ```
 to clean and build only.
-The first two benchmark runs represent the time taken by two different C++ implementations to build a tree of size N and get all subpalindromes from the eertree.
-The second two benchmark runs represent the time taken by two different C++ implementations to calculate the number of rich strings of size N by utilizing eertrees.
+
+Check bench/benchmarks.ipynb for results.

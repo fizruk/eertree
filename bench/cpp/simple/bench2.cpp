@@ -63,7 +63,8 @@ BENCHMARK(bench)
     ->Arg(4 * BENCH_N)
     ->Arg(8 * BENCH_N)
     ->Arg(16 * BENCH_N)
-    ->Iterations(ITER_N)        // # of iterations
+    ->Repetitions(ITER_N)
+    ->ReportAggregatesOnly(true)
     ->Unit(benchmark::kSecond); // time in seconds
 
 BENCHMARK_MAIN();

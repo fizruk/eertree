@@ -19,9 +19,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 
 set(SOURCES
-./simple/eertree1.h
+./simple/eertree1.h 
 ./simple/eertree2.h
-./simple/bench1.cpp
+./simple/bench1.cpp 
 ./simple/bench2.cpp
 ./A216264/eertree1.h
 ./A216264/eertree2.h

@@ -11,7 +11,7 @@
 #include <ctime>
 #include <unistd.h>
 
-#define ITER_N 1
+#define ITER_N 5
 #define BENCH_N 2
 
 static void palindromes();
@@ -61,8 +61,8 @@ BENCHMARK(bench)
     ->Arg(8 * BENCH_N)
     ->Arg(9 * BENCH_N)
     ->Arg(10 * BENCH_N)
-    ->Arg(11 * BENCH_N)
-    ->Iterations(ITER_N)        // # of iterations
+    ->Repetitions(ITER_N)
+    ->ReportAggregatesOnly(true)
     ->Unit(benchmark::kSecond); // time in seconds
 
 BENCHMARK_MAIN();

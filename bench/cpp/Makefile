@@ -20,7 +20,7 @@ build/all: clean
 	cd build && cmake .. && make
 
 run: build
-	./build/bench1
-	./build/bench2
-	./build/bench3
-	./build/bench4
+	./build/bench1 --benchmark_format=csv
+	./build/bench2 --benchmark_format=csv
+	./build/bench3 --benchmark_format=csv
+	./build/bench4 --benchmark_format=csv

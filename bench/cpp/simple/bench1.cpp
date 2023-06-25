@@ -10,8 +10,7 @@
 #include <unistd.h>
 
 #define BENCH_N 10000
-#define ITER_N 100
-
+#define ITER_N 20
 static std::string randomString(const int len);
 static void palindromes();
 
@@ -67,7 +66,8 @@ BENCHMARK(bench)
     ->Arg(4 * BENCH_N)
     ->Arg(8 * BENCH_N)
     ->Arg(16 * BENCH_N)
-    ->Iterations(ITER_N)        // # of iterations
+    ->Repetitions(ITER_N)
+    ->ReportAggregatesOnly(true)
     ->Unit(benchmark::kSecond); // time in seconds
 
 BENCHMARK_MAIN();
