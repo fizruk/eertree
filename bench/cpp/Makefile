@@ -21,6 +21,9 @@ build/all: clean
 
 run: build
 	./build/bench1 --benchmark_format=csv
+	@echo
 	./build/bench2 --benchmark_format=csv
+	@echo
 	./build/bench3 --benchmark_format=csv
+	@echo
 	./build/bench4 --benchmark_format=csv

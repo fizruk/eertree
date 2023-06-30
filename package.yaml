@@ -87,38 +87,37 @@ benchmarks:
     dependencies:
     - criterion
     - eertree
+  # list:
+  #   main:        Main.hs
+  #   source-dirs: bench/hs/list
+  #   ghc-options:
+  #   - -threaded
+  #   - -O2
+  #   - -rtsopts
+  #   - -with-rtsopts=-N
+  #   dependencies:
+  #   - criterion
+  #   - eertree
 
-  list:
-    main:        Main.hs
-    source-dirs: bench/hs/list
-    ghc-options:
-    - -threaded
-    - -O2
-    - -rtsopts
-    - -with-rtsopts=-N
-    dependencies:
-    - criterion
-    - eertree
-
-  node:
-    main:        Main.hs
-    source-dirs: bench/hs/node
-    ghc-options:
-    - -threaded
-    - -O2
-    - -rtsopts
-    - -with-rtsopts=-N
-    dependencies:
-    - criterion
-    - eertree
-  rich:
-    main:         Main.hs
-    source-dirs: bench/hs/rich
-    ghc-options:
-    - -threaded
-    - -O2
-    - -rtsopts
-    - -with-rtsopts=-N
-    dependencies:
-    - criterion
-    - eertree
+  # node:
+  #   main:        Main.hs
+  #   source-dirs: bench/hs/node
+  #   ghc-options:
+  #   - -threaded
+  #   - -O2
+  #   - -rtsopts
+  #   - -with-rtsopts=-N
+  #   dependencies:
+  #   - criterion
+  #   - eertree
+  # rich:
+  #   main:         Main.hs
+  #   source-dirs: bench/hs/rich
+  #   ghc-options:
+  #   - -threaded
+  #   - -O2
+  #   - -rtsopts
+  #   - -with-rtsopts=-N
+  #   dependencies:
+  #   - criterion
+  #   - eertree

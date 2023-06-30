@@ -33,9 +33,10 @@ This should install all dependencies,
 including a proper version of GHC if needed.
 
 ### Benchmarks
-To run C++ benchmarks:
-Go to bench/cpp directory and run
+Please refer to [automation file](bench/benchmarks.ipynb) for a guide on how to run benchmarks and see results.\
+To run C++ benchmarks separetely:
 ```sh
+cd bench/cpp
 make run
 ```
 Alternatively, you can use 
@@ -44,5 +45,3 @@ make clean
 make build
 ```
 to clean and build only.
-
-Check bench/benchmarks.ipynb for results.
