@@ -71,7 +71,7 @@ eertree = foldr prepend empty
 -- >>> eertreeFromString @2 "01001" == eertree @2 [0,1,0,0,1]
 -- True
 eertreeFromString :: KnownNat n => String -> EERTREE n
-eertreeFromString = foldr (prepend . Symbol . digitToInt) empty
+eertreeFromString = foldr (prepend . Symbol . charToInt) empty
 
 -- | EERTREE of a reversed string
 --
