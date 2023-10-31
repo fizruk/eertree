@@ -44,7 +44,14 @@ executables:
       - -with-rtsopts=-N
     dependencies:
       - eertree
-
+  msubstr:
+    main:        MSUBSTR.hs
+    source-dirs: app/hs/
+    ghc-options:
+    - -threaded
+    - -O2
+    dependencies:
+    - eertree
 library:
   source-dirs: src
   ghc-options:
