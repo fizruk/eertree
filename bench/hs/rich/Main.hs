@@ -1,5 +1,5 @@
 import Criterion.Main
-import           EERTREE.Simple
+import           EERTREE.Applications
 
 benchmark :: [Int] -> Benchmark
 benchmark inputValues = bgroup "a216264" [bench (show n) $ nf (show . a216264) n | n <- inputValues]

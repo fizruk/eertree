@@ -2,7 +2,7 @@
 module Main where
 
 import           Data.List      (intercalate)
-import           EERTREE.Simple
+import           EERTREE.Applications
 import           System.IO      (hFlush, stdout)
 
 main :: IO ()

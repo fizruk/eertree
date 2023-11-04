@@ -10,7 +10,6 @@ import           Data.Proxy
 import           GHC.TypeLits    (KnownNat, Nat, natVal)
 import           Control.DeepSeq
 import Data.Ord
-import Data.Bool
 import Data.Char
 
 lowercaseEnglishToSymbol :: Char -> Int

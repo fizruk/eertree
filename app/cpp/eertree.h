@@ -137,8 +137,8 @@ public:
     {
         // No deletion is necessary
         if(!addedNewNode[idx]){
-            current = myPriorCurrent[idx];
             minus_occ_current(current);
+            current = myPriorCurrent[idx];
             return;
         }
 
