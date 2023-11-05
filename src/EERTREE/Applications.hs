@@ -1,20 +1,20 @@
 {-# LANGUAGE DataKinds           #-}
-{-# LANGUAGE DeriveGeneric       #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
-
 module EERTREE.Applications where
+
 import           Data.Ord                    (comparing)
 import           Data.List                   (maximumBy)
-import           GHC.TypeLits                (KnownNat)
-import           EERTREE.Simple
-import           EERTREE.Node
-import           EERTREE.Symbol
 import qualified Data.Vector.Unboxed         as UVector
 import qualified Data.Vector.Unboxed.Mutable as MVector
 import           Data.Map                    (Map)
 import qualified Data.Map                    as Map
+import           GHC.TypeLits                (KnownNat)
 import           Control.Monad.ST            (runST)
+
+import EERTREE.Node ( Node(len) )
+import EERTREE.Symbol ( alphabet )
+import           EERTREE.Simple
 
 -- | Compute first \(n\) elements of <https://oeis.org/A216264 A216264 sequence>
 -- (binary rich strings count for \(n = 0, 1, \ldots\)).
@@ -40,6 +40,7 @@ a216264 n = 1 : map (*2) halves
 -- for a given string S find a palindrome P maximizing the value
 -- |P| * occ(S, P), where occ(S, P) is the number of occurences of P in S
 --
+-- >>> :set -XDataKinds
 -- >>> palindromicRefrain (eertreeFromString @3 "0102010")
 -- (fromPalindrome [0,1,0,2,0,1,0],7)
 --
@@ -114,4 +115,3 @@ getMsubstr str = (lenn, freq)
 getTMsubstr :: [String] -> [(Int, Int)]
 getTMsubstr [] = []
 getTMsubstr (str:xs) =  (getMsubstr str):(getTMsubstr xs)    
-

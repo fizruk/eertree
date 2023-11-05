@@ -5,21 +5,16 @@
 module EERTREE.Simple where
 
 import           Control.DeepSeq             (NFData)
-import           Data.Char                   (digitToInt)
 import qualified Data.Foldable               as F
-import           Data.List                   (maximumBy, nub)
+import           Data.List                   (nub)
 import           Data.Map                    (Map)
 import qualified Data.Map                    as Map
-import           Data.Ord                    (comparing)
 import           Data.Sequence               (Seq)
 import qualified Data.Sequence               as Seq
 import           Data.String                 (IsString (..))
 import           GHC.Generics                (Generic)
 import           GHC.TypeLits                (KnownNat)
 
-import           Control.Monad.ST            (runST)
-import qualified Data.Vector.Unboxed         as UVector
-import qualified Data.Vector.Unboxed.Mutable as MVector
 
 import           EERTREE.Node
 import           EERTREE.Symbol
