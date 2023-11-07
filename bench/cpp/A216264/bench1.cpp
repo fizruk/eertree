@@ -5,7 +5,7 @@
 * It utilizes some of the past computations, could be improved on.
 */
 #include <benchmark/benchmark.h>
-#include "eertree1.h"
+#include "../eertree1.h"
 
 #include <iostream>
 #include <ctime>
@@ -15,6 +15,7 @@
 #define ITER_N 5
 
 static void palindromes();
+
 // Create a vector of all possible strings of size len.
 static void AllStrings(std::vector<std::string>* strings, std::string str, const int len){
     if(str.size() == len){
@@ -196,4 +197,3 @@ BENCHMARK(bench)
     ->Unit(benchmark::kSecond); // time in seconds
 
 BENCHMARK_MAIN();
-

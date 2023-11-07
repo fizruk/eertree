@@ -27,3 +27,5 @@ run: build
 	./build/bench3 --benchmark_format=csv
 	@echo
 	./build/bench4 --benchmark_format=csv
+	@echo
+	./build/bench5 --benchmark_format=csv

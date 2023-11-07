@@ -3,7 +3,7 @@
 * https://github.com/google/benchmark
 */
 #include <benchmark/benchmark.h>
-#include "eertree2.h"
+#include "../eertree2.h"
 
 #include <iostream>
 #include <ctime>

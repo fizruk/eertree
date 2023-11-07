@@ -5,7 +5,7 @@
 * It constructs a new tree for every new string to check if it's a rich string.
 */
 #include <benchmark/benchmark.h>
-#include "eertree2.h"
+#include "../eertree2.h"
 
 #include <iostream>
 #include <ctime>
@@ -16,6 +16,14 @@
 
 static void palindromes();
 
+static void AllStrings(std::vector<std::string>* strings, std::string str, const int len){
+    if(str.size() == len){
+        strings->push_back(str);
+        return;
+    }
+    AllStrings(strings, str + "0", len);
+    AllStrings(strings, str + "1", len);
+}
 
 // -- Observation: there is exactly the same number of rich strings
 // -- that start with 0 as there are those starting with 1.

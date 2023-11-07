@@ -128,3 +128,14 @@ benchmarks:
     dependencies:
     - criterion
     - eertree
+  msubstr-bench:
+    main:         Main.hs
+    source-dirs: bench/hs/msubstr
+    ghc-options:
+    - -threaded
+    - -O2
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - criterion
+    - eertree

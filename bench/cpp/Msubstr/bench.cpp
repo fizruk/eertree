@@ -4,17 +4,16 @@
 */
 #include <benchmark/benchmark.h>
 #include "../eertree1.h"
-
 #include <iostream>
 #include <ctime>
 #include <unistd.h>
 
-#define BENCH_N 10000
-#define ITER_N 20
+#define BENCH_N 500
+#define ITER_N 3
 
 static std::string randomString(const int len);
 
-static void palindromes();
+static void msubstr(const std::string str);
 
 static std::string randomString(const int len)
 {
@@ -39,25 +38,53 @@ static std::string randomString(const int len)
     return s;
 }
 
-static void palindromes(const std::string s)
-{
-    EERTREE tree;
-    for (int i = 0; i < s.size(); ++i)
-        tree.insert(s, i);
+static std::string randomPalindrome(int len){
+    std::string half_palindrome = randomString(len/2);
+    std::string palindrome = half_palindrome;
+    if(len %2)
+    {
+        half_palindrome += 'a';
+    }
+    std::reverse(half_palindrome.begin(), half_palindrome.end());
+    palindrome += half_palindrome;
+    return palindrome;
+}
+
+static void msubstr(const std::string str) {
+
+    EERTREE* tree = new EERTREE();
+    for (int i = 0; i < str.size(); i++)
+    {
+        tree->insert(str, i);
+    }
 
     std::string result;
-    tree.palindromes(s, result);
+    int size = tree->pointer;
+    std::pair<int,int> res = {0,0}; // size, frequency; 
+    for(int i = 3; i <= size; i++) {
+        if(tree->tree[i].len > res.first)
+        {
+            res.first = tree->tree[i].len;
+            res.second = tree->freq[i];
+        }
+        else
+        if(tree->tree[i].len == res.first)
+        {
+            res.second += tree->freq[i];
+        }
+    }
+    return;
 }
 
 static void bench(benchmark::State &state)
 {
     int len = state.range(0);
 
-    std::string s = randomString(len);
 
     for (auto _ : state)
     {
-        palindromes(s);
+        std::string s = randomPalindrome(len);
+        msubstr(s);
     }
 }
 
@@ -66,7 +93,7 @@ BENCHMARK(bench)
     ->Arg(BENCH_N)
     ->Arg(2 * BENCH_N)
     ->Arg(4 * BENCH_N)
-    ->Arg(8 * BENCH_N)
+    ->Arg(6 * BENCH_N)
     ->Repetitions(ITER_N)
     ->ReportAggregatesOnly(true)
     ->Unit(benchmark::kSecond); // time in seconds
