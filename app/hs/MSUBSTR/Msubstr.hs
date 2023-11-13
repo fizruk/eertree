@@ -5,6 +5,7 @@
 {-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
+{-# LANGUAGE BangPatterns #-}
 
 module Main where
 import Data.Foldable as F
@@ -33,8 +34,7 @@ processMsubstrLine :: Int -> IO()
 processMsubstrLine 0 = return ()
 processMsubstrLine x = do
     str <- getLine
-    let (lenn, freq) = getMsubstr str
-    putStrLn(show lenn ++ " " ++ show freq)
+    let !(lenn, freq) = getMsubstr str
     processMsubstrLine (x - 1)
 
 main :: IO ()
