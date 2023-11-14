@@ -5,7 +5,6 @@
 module EERTREE.List where
 
 import           Control.DeepSeq (NFData)
-import           Data.Char       (digitToInt)
 import qualified Data.Foldable   as F
 import           Data.String     (IsString (..))
 import           GHC.Generics    (Generic)

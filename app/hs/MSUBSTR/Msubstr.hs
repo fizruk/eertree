@@ -9,9 +9,7 @@
 
 module Main where
 import Data.Foldable as F
-import Data.List (maximumBy)
-import Data.Ord (comparing)
-import           EERTREE.List
+import EERTREE.List ( EERTREE(palindromes), eertreeFromString )
 import           EERTREE.Node
 countMax :: Ord a => a -> [a] -> (a, Int)
 countMax z = foldl' step (z, 1)
@@ -35,6 +33,7 @@ processMsubstrLine 0 = return ()
 processMsubstrLine x = do
     str <- getLine
     let !(lenn, freq) = getMsubstr str
+    putStrLn(show lenn ++ " " ++ show freq)
     processMsubstrLine (x - 1)
 
 main :: IO ()

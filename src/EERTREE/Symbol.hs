@@ -13,7 +13,7 @@ import Data.Ord
 import Data.Char
 
 lowercaseEnglishToSymbol :: Char -> Int
-lowercaseEnglishToSymbol c = (ord c - ord 'a')
+lowercaseEnglishToSymbol c = ord c - ord 'a'
 
 isLowercaseEnglish :: Char -> Bool
 isLowercaseEnglish x
@@ -22,8 +22,8 @@ isLowercaseEnglish x
 
 charToInt :: Char -> Int
 charToInt c 
-  | (isLowercaseEnglish c) = (lowercaseEnglishToSymbol c)
-  | otherwise = (digitToInt c)
+  | isLowercaseEnglish c = lowercaseEnglishToSymbol c
+  | otherwise = digitToInt c
 
 -- $setup
 -- >>> :set -XTypeApplications -XDataKinds
