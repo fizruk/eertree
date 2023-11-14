@@ -4,6 +4,7 @@
 {-# LANGUAGE BangPatterns    #-}
 module EERTREE.Applications where
 
+import Control.DeepSeq (force)
 import Control.Monad (replicateM)
 import           Data.Ord                    (comparing)
 import           Data.List                   (maximumBy)
@@ -13,11 +14,13 @@ import           Data.Map                    (Map)
 import qualified Data.Map                    as Map
 import           GHC.TypeLits                (KnownNat)
 import           Control.Monad.ST            (runST)
-import           Math.NumberTheory.Logarithms (integerLog2')
+import           Math.NumberTheory.Logarithms (intLog2')
+import Data.Text (Text)
+import qualified Data.Text as Text
 import Control.Parallel.Strategies
 
 import EERTREE.Node ( Node(len) )
-import EERTREE.Symbol ( alphabet )
+import EERTREE.Symbol
 import           EERTREE.Simple
 
 -- | Compute first \(n\) elements of <https://oeis.org/A216264 A216264 sequence>
@@ -31,20 +34,24 @@ import           EERTREE.Simple
 --
 -- >>> a216264 15
 -- [1,2,4,8,16,32,64,128,252,488,932,1756,3246,5916,10618]
-a216264 :: Int -> [Int]
-a216264 n = 1 : 2 : 4 : 8 : map (*2) halves
+a216264 :: Int -> Int -> [Int]
+a216264 cores n = a216264' startLength ++ map (*2) halves
   where
     -- Observation: there is exactly the same number of rich strings
     -- that start with 0 as there are those starting with 1.
     -- That is why we can do half work (or 1/(alphabet size) in general)
     -- and count rich strings faster.
     halves = foldr (zipWith (+)) (repeat 0) results
-    cores = 16
-    startLength = 1 + integerLog2' cores
+    startLength = min 7 (1 + intLog2' cores)
     results =
       [ dfsCountLevels (n - startLength) (eertree (0 : startBits)) (richSubEERTREEs @2)
-      | startBits <- replicateM (startLength - 1) [0,1]
+      | startBits <- replicateM (startLength - 1) [0,1]   -- only works for startLength <= 7, since not all binary strings are rich starting from n = 8
       ] `using` parList rpar
+
+a216264' :: Int -> [Int]
+a216264' n = 1 : map (*2) halves
+  where
+    halves = dfsCountLevels (n - 1) (singleton 0) (richSubEERTREEs @2)
 
 -- | Palindromic refrain:
 -- for a given string S find a palindrome P maximizing the value
@@ -116,11 +123,19 @@ maxSubLengthSum listFreq =
   in
     (len (fst maxLength), sum freqValues)
 
+getMsubstrPar :: Int -> Text -> (Int, Int)
+getMsubstrPar _chunkSize input = (lenn, freq)
+  where
+    chunkSize = Text.length input `div` 16
+    tree = foldr merge empty chunks
+    chunks =
+      [ eertreeFromString @26 (Text.unpack chunk)
+      | chunk <- Text.chunksOf chunkSize input
+      ] `using` parList rpar
+    (lenn, freq) = maxSubLengthSum (frequency tree)
+
 getMsubstr :: String -> (Int, Int)
 getMsubstr str = (lenn, freq)
   where
     tree = eertreeFromString @26 str
     (lenn, freq) = maxSubLengthSum (frequency tree)
-
-getTMsubstr :: [String] -> [(Int, Int)]
-getTMsubstr = map getMsubstr
