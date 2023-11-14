@@ -1,7 +1,7 @@
 #include <iostream>
 #include <string>
 #include <cmath>
-#define N 20000
+#define N 30005
 
 struct Node
 {

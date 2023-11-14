@@ -14,12 +14,10 @@ build:
 	fi
 	@cd build && cmake .. && make
 
-run_msubstr:
-	make build
-	@./build/msubstr
-run_queries:
-	make build
-	@./build/queries
+run_msubstr: build
+	./build/msubstr
+run_queries: build
+	./build/queries
 
 clean:
 	@rm -rf build
