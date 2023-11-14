@@ -10,6 +10,7 @@ project(eertree_app)
 
 set(SOURCES
 ./eertree.h
+./eertree2.h
 ./MSUBSTR.cpp
 ./queries.cpp
 )

@@ -1,11 +1,10 @@
 /**
 This version has:
-    * Online computation of frequency.
+    * Offline computation of frequency.
     * Insert and delete last.
     * Total number of palindromes.
     * Unique number of palindromes.
 **/
-
 #include <iostream>
 #include <string>
 #include <cmath>
@@ -51,24 +50,6 @@ public:
         total_occ = 0;
     }
 
-    void add_occ_current(int id)
-    {
-        if(id < 3)
-            return;
-        total_occ ++;
-        freq[id] ++;
-        add_occ_current(tree[id].suffix);
-    }
-
-    void minus_occ_current(int id)
-    {
-        if(id < 3)
-            return;
-        total_occ --;
-        freq[id] --;
-        minus_occ_current(tree[id].suffix);
-    }
-
     void insert(const std::string s, int idx)
     {
         /* 
@@ -95,7 +76,7 @@ public:
         if (tree[tmp].edges[s[idx] - 'a'] != 0)
         {
             current = tree[tmp].edges[s[idx] - 'a'];
-            add_occ_current(current);
+            freq[current] ++;
             return;
         }
         addedNewNode[idx] = true;
@@ -117,12 +98,10 @@ public:
 
         // making new Node as current Node
         current = pointer;
-        // freq[current] = 1;
-        // add_occ_current(current);
         if (tree[current].len == 1)
         {
             tree[current].suffix = 2;
-            add_occ_current(current);
+            freq[current] ++;
             return;
         }
         while (true)
@@ -137,20 +116,20 @@ public:
         * linking current Nodes suffix link with s[idx]+Y+s[idx]
         */
         tree[current].suffix = tree[tmp].edges[s[idx] - 'a'];
-        add_occ_current(current);
+        freq[current] ++;
     }
 
     void deleteLast(const std::string s, int idx)
     {
         // No deletion is necessary
         if(!addedNewNode[idx]){
-            minus_occ_current(current);
+            freq[current] --;
             current = myPriorCurrent[idx];
             return;
         }
 
         // Deleting latest node
-        minus_occ_current(pointer);
+        freq[pointer]++;
         int tmp = myPriorTmp[idx];
         tree[tmp].edges[s[idx] - 'a'] = 0;
         pointer -= 1;
@@ -199,6 +178,15 @@ public:
             result += ' ';
             result += std::to_string(freq[i]);
             result += '\n';
+        }
+    }
+    
+    void compute_freq()
+    {
+        for (int i = pointer; i >= 3; i--)
+        {
+            freq[tree[i].suffix] += (freq[i]-1);
+            total_occ += freq[i];
         }
     }
 

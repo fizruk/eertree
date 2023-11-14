@@ -2,7 +2,7 @@
 * sub-palindrome, and the number of sub-palindromes with such length.
 * This problem made us introduce offline-frequency computation*/
 
-#include "eertree.h"
+#include "eertree2.h"
 #include <iostream>
 #include <string>
 #define f first 
@@ -11,7 +11,7 @@
 std::pair<int, int> get_mubstr(EERTREE* tree, const std::string str) {
     std::string result;
     int size = tree->pointer;
-
+    tree->compute_freq();
     std::pair<int,int> res = {0,0}; // size, frequency; 
     for(int i = 3; i <= size; i++) {
         if(tree->tree[i].len > res.f) {
