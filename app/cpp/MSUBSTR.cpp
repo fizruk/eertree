@@ -1,6 +1,8 @@
 /* You have t strings, for each string, get the length of the longest 
 * sub-palindrome, and the number of sub-palindromes with such length.
 * This problem made us introduce offline-frequency computation*/
+#pragma GCC optimize("O3")
+#pragma GCC optimize("unroll-loops")
 
 #include "eertree2.h"
 #include <iostream>
@@ -29,14 +31,15 @@ std::pair<int, int> get_mubstr(EERTREE* tree, const std::string str) {
 int main() {
     int t;
     std::string str;
-    std::cin >> t;
+    scanf("%d", &t);
     while (t--) {
         std::cin >> str;
+
         EERTREE eertree;
         for(int i = 0; i < str.size(); i++) {
             eertree.insert(str, i);
         }
         std::pair<int, int> res = get_mubstr(&eertree, str);
-        std::cout << res.f << ' ' << res.s << '\n';
+        printf("%d %d\n", res.f, res.s);
     }
 }

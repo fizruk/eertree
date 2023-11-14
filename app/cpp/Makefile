@@ -2,7 +2,7 @@ CXX = g++
 CXXFLAGS = -std=c++11
 
 # Specify the names of your executables
-EXECS = msubstr queries
+EXECS = msubstr queries rich
 
 .PHONY: all clean build run
 
@@ -18,7 +18,8 @@ run_msubstr: build
 	./build/msubstr
 run_queries: build
 	./build/queries
-
+run_rich: build
+	./build/rich
 clean:
 	@rm -rf build
 

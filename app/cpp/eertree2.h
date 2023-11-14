@@ -1,9 +1,10 @@
 /**
 This version has:
     * Offline computation of frequency.
-    * Insert and delete last.
+    * Insert and delete last
     * Total number of palindromes.
     * Unique number of palindromes.
+    * Uses direct links
 **/
 #include <iostream>
 #include <string>
@@ -16,6 +17,7 @@ struct Node
     int len;
 
     int suffix;
+    int directLinks[26] = {};
     int edges[26] = {};
 };
 
@@ -48,6 +50,9 @@ public:
         current = 1;
         pointer = 2;
         total_occ = 0;
+        for(int i = 0; i < 26; i++){
+            tree[1].directLinks[i] = tree[2].directLinks[i] = 1;
+        }
     }
 
     void insert(const std::string s, int idx)
@@ -60,19 +65,15 @@ public:
         */
         addedNewNode[idx] = false;
         int tmp = current;
-        while (true)
+        
+        if (!(idx - tree[tmp].len >= 1 and s[idx] == s[idx - tree[tmp].len - 1]))
         {
-            int currentLen = tree[tmp].len;
-            if (idx - currentLen >= 1 and s[idx] == s[idx - currentLen - 1])
-                break;
-            if(tmp == 0 && currentLen == 0)
-                break;
-            tmp = tree[tmp].suffix;
+            tmp = tree[tmp].directLinks[s[idx] -'a'];
         }
+        
         // store the initial state of tmp and current for future deletion purposes.
         myPriorTmp[idx] = tmp;
         myPriorCurrent[idx] = current;
-
         if (tree[tmp].edges[s[idx] - 'a'] != 0)
         {
             current = tree[tmp].edges[s[idx] - 'a'];
@@ -95,28 +96,33 @@ public:
         * palindromic suffix for newly created Node
         */
         tmp = tree[tmp].suffix;
-
         // making new Node as current Node
         current = pointer;
         if (tree[current].len == 1)
         {
             tree[current].suffix = 2;
             freq[current] ++;
+            std::copy(tree[tree[current].suffix].directLinks, 
+                tree[tree[current].suffix].directLinks + 26, tree[current].directLinks);
+            tree[current].directLinks[s[idx] - 'a'] = 2;
             return;
         }
-        while (true)
+
+        if (!(idx - tree[tmp].len >= 1 and s[idx] == s[idx - tree[tmp].len - 1]))
         {
-            int currentLen = tree[tmp].len;
-            if (idx - currentLen >= 1 and s[idx] == s[idx - currentLen - 1])
-                break;
-            tmp = tree[tmp].suffix;
+            tmp = tree[tmp].directLinks[s[idx] -'a'];
         }
+        
         /*
         * Now we have found string Y
         * linking current Nodes suffix link with s[idx]+Y+s[idx]
         */
         tree[current].suffix = tree[tmp].edges[s[idx] - 'a'];
+        tmp = tree[current].suffix;
         freq[current] ++;
+        std::copy(tree[tree[current].suffix].directLinks, 
+            tree[tree[current].suffix].directLinks + 26, tree[current].directLinks);
+        tree[current].directLinks[s[idx - tree[tmp].len] - 'a'] = tree[current].suffix;
     }
 
     void deleteLast(const std::string s, int idx)
