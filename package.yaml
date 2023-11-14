@@ -51,9 +51,17 @@ executables:
     main:        Msubstr.hs
     source-dirs: app/hs/MSUBSTR
     ghc-options:
+    # - -threaded
+    - -O2
+    dependencies:
+    - eertree
+  msubstr-par:
+    main:        MsubstrPar.hs
+    source-dirs: app/hs/MSUBSTR-PAR
+    ghc-options:
     - -threaded
     - -O2
-    - -rtsopts
+    # - -rtsopts
     - -with-rtsopts=-N
     dependencies:
     - eertree
