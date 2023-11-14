@@ -33,6 +33,7 @@ dependencies:
 - integer-logarithms
 - deepseq
 - mtl
+- parallel
 
 executables:
   a216264:

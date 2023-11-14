@@ -1,8 +1,10 @@
 {-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
+{-# LANGUAGE BangPatterns    #-}
 module EERTREE.Applications where
 
+import Control.Monad (replicateM)
 import           Data.Ord                    (comparing)
 import           Data.List                   (maximumBy)
 import qualified Data.Vector.Unboxed         as UVector
@@ -11,6 +13,8 @@ import           Data.Map                    (Map)
 import qualified Data.Map                    as Map
 import           GHC.TypeLits                (KnownNat)
 import           Control.Monad.ST            (runST)
+import           Math.NumberTheory.Logarithms (integerLog2')
+import Control.Parallel.Strategies
 
 import EERTREE.Node ( Node(len) )
 import EERTREE.Symbol ( alphabet )
@@ -28,13 +32,19 @@ import           EERTREE.Simple
 -- >>> a216264 15
 -- [1,2,4,8,16,32,64,128,252,488,932,1756,3246,5916,10618]
 a216264 :: Int -> [Int]
-a216264 n = 1 : map (*2) halves
+a216264 n = 1 : 2 : 4 : 8 : map (*2) halves
   where
     -- Observation: there is exactly the same number of rich strings
     -- that start with 0 as there are those starting with 1.
     -- That is why we can do half work (or 1/(alphabet size) in general)
     -- and count rich strings faster.
-    halves = dfsCountLevels (n - 1) (singleton 0) (richSubEERTREEs @2)
+    halves = foldr (zipWith (+)) (repeat 0) results
+    cores = 16
+    startLength = 1 + integerLog2' cores
+    results =
+      [ dfsCountLevels (n - startLength) (eertree (0 : startBits)) (richSubEERTREEs @2)
+      | startBits <- replicateM (startLength - 1) [0,1]
+      ] `using` parList rpar
 
 -- | Palindromic refrain:
 -- for a given string S find a palindrome P maximizing the value
@@ -75,7 +85,7 @@ dfsCountLevels k root subtrees = runST $ do
   go result 0 root
   UVector.toList <$> UVector.freeze result
     where
-      go v i t
+      go v !i t
         | i >= k = return ()
         | otherwise = do
           MVector.modify v (+1) i
@@ -104,14 +114,13 @@ maxSubLengthSum listFreq =
     maxNodes = filter (\(node, _) -> len node == len (fst maxLength)) listFreq
     freqValues = map snd maxNodes
   in
-    (len (fst maxLength), (sum freqValues))
+    (len (fst maxLength), sum freqValues)
 
 getMsubstr :: String -> (Int, Int)
 getMsubstr str = (lenn, freq)
   where
     tree = eertreeFromString @26 str
-    (lenn, freq) = (maxSubLengthSum (frequency tree))
+    (lenn, freq) = maxSubLengthSum (frequency tree)
 
 getTMsubstr :: [String] -> [(Int, Int)]
-getTMsubstr [] = []
-getTMsubstr (str:xs) =  (getMsubstr str):(getTMsubstr xs)    
+getTMsubstr = map getMsubstr
