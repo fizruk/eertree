@@ -30,6 +30,8 @@ data EERTREE n = EERTREE
   , strReversedPrefix :: Seq (Symbol n) -- ^ Prefix, preceding maximum palindromic suffix
   , strSuffix         :: Seq (Symbol n) -- ^ Suffix, following maximum palindromic prefix.
   , palindromes       :: [Node n]       -- ^ Accumulated list of encountered palindromes.
+  -- | history is only for append and pop_back, does not get reversed with eertree.
+  , history           :: [EERTREE n]    -- ^ History of previous eertrees
   } deriving (Eq, Show, Generic)
 instance NFData (EERTREE n)
 
@@ -45,6 +47,7 @@ empty = EERTREE
   , strReversedPrefix  = Seq.empty
   , strSuffix          = Seq.empty
   , palindromes        = []
+  , history = []
   }
 
 -- | An eertree for a singleton string.
@@ -77,6 +80,7 @@ reverseEERTREE t = t { maxPrefix          = maxSuffix t
                      , maxSuffix          = maxPrefix t
                      , strReversedPrefix  = strSuffix t
                      , strSuffix          = strReversedPrefix t
+                     , history = history t
                      }
 
 -- | Get the string back from an eertree.
@@ -114,6 +118,7 @@ prepend c t =
       , strReversedPrefix  = if null cs then Seq.empty else strReversedPrefix t Seq.|> c
       , strSuffix          = cs
       , palindromes        = newMaxPrefix : palindromes t
+      , history = history t
       } where
         newMaxPrefix = edge c (maxPrefix t)
     _ ->
@@ -125,6 +130,7 @@ prepend c t =
           , strReversedPrefix  = if null newStrSuffix then Seq.empty else strReversedPrefix t Seq.|> c
           , strSuffix          = newStrSuffix
           , palindromes        = newMaxPrefix : palindromes t
+          , history = history t
           } where
               newStrSuffix = Seq.drop (n - 1) (value (maxPrefix t)) <> strSuffix t
               n = len newMaxPrefix
@@ -135,10 +141,21 @@ prepend c t =
 -- >>> fromEERTREE (append 0 (eertreeFromString @2 "01001"))
 -- [0,1,0,0,1,0]
 append :: KnownNat n => Symbol n -> EERTREE n -> EERTREE n
-append c t = reverseEERTREE (prepend c (reverseEERTREE t))
+append c t =  reverseEERTREE (prepend c (reverseEERTREE (addTreeVersion t)))
+
+popBackTreeVersion :: KnownNat n => EERTREE n -> EERTREE n
+popBackTreeVersion t = 
+  case history t of
+    []     -> empty
+    [_] -> empty
+    (v1:vs) -> v1 { history = vs }
+
+-- | Add a new version to the history
+addTreeVersion :: KnownNat n => EERTREE n -> EERTREE n
+addTreeVersion t = t { history = t : history t }
 
 -- | Merge two eertrees in O(1) on average
---
+-- TODO: add history management to merge
 -- >>> fromEERTREE (merge @2 "0110100" "11001001")
 -- [0,1,1,0,1,0,0,1,1,0,0,1,0,0,1]
 --

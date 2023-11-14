@@ -52,6 +52,15 @@ executables:
     - -O2
     dependencies:
     - eertree
+  queries:
+    main: Queries.hs
+    # main: tmp.hs
+    source-dirs: app/hs/QUERIES
+    ghc-options:
+    - -threaded
+    - -O2
+    dependencies:
+    - eertree
 library:
   source-dirs: src
   ghc-options:
