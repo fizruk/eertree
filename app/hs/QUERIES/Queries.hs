@@ -5,12 +5,14 @@
 {-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE BangPatterns           #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TypeApplications    #-}
 {-# LANGUAGE LambdaCase #-}
 
 module Main where
 
 import Control.Monad.State
+import Data.Map (Map)
 import qualified Data.Map as Map
 import EERTREE.List
 import EERTREE.Node
@@ -35,25 +37,38 @@ palindromicSuffixes node
     | len node > 0 = node : palindromicSuffixes (link node)
     | otherwise = []
 
+updatePalSuffixesCount :: (MonadState ([(EERTREE n, Int)], Map Integer Int) m, KnownNat n) => Node n -> m Int
+updatePalSuffixesCount node = do
+    (_, tab) <- get
+    let i = index node
+    case Map.lookup i tab of
+        Nothing -> do
+            let n = length (palindromicSuffixes node)
+            modify (\(x, tab) -> (x, Map.insert i n tab))
+            return n
+        Just n -> return n
+
 main :: IO ()
 main = do
     _ <- getLine
     queries <- getLine
-    _ <- flip execStateT [(empty @26, 0)] $
+    _ <- flip execStateT ([(empty @26, 0)], Map.empty) $
         forM_ queries $ \case
             '-' -> do
                 -- { state = [(t3, n3), (t2, n2), (t1, n1)] }
-                modify tail                 -- state' := tail state
+                modify (\(x, y) -> (tail x, y))                 -- state' := tail state
                 -- { state = [(t2, n2), (t1, n1)] }
-                (_, n) : _ <- get
+                (_, n) : _ <- gets fst
                 -- { state = [(t2, n2), (t1, n1)], n = n2 }
-                liftIO $ putStr (show n)
+                liftIO $ putStr (show n ++ " ")
             c -> do
                 -- { state = [(t3, n3), (t2, n2), (t1, n1)] }
-                (t, n) : _ <- get
+                (t, n) : _ <- gets fst
                 -- { t = t3, n = n3 }
                 let s = Symbol (lowercaseEnglishToSymbol c)
                 let t' = prepend s t
-                let !n' = n + length (palindromicSuffixes (maxSuffix t'))
-                modify ((t', n') : )          -- state' := (t', n') : state
+                d <- updatePalSuffixesCount (maxPrefix t')
+                let !n' = n + d
+                modify (\(x, y) -> ((t', n') : x, y))          -- state' := (t', n') : state
+                liftIO $ putStr (show n' ++ " ")
     putStrLn ""
