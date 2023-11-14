@@ -32,6 +32,7 @@ dependencies:
 - QuickCheck
 - integer-logarithms
 - deepseq
+- mtl
 
 executables:
   a216264:
