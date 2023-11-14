@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds                  #-}
+{-# LANGUAGE GADTs                  #-}
 {-# LANGUAGE DeriveAnyClass             #-}
 {-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE DerivingStrategies         #-}
@@ -6,6 +7,8 @@
 {-# LANGUAGE KindSignatures             #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE TypeApplications           #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE UndecidableInstances #-}
 module EERTREE.Node where
 
 import           Control.DeepSeq
@@ -25,11 +28,20 @@ import qualified Data.Sequence                as Seq
 import           Data.Vector                  (Vector)
 import qualified Data.Vector                  as Vector
 import           GHC.Generics
-import           GHC.TypeLits                 (KnownNat, Nat, natVal)
+import           GHC.TypeLits                 (KnownNat, Nat, natVal, someNatVal, SomeNat(..))
 import           Math.NumberTheory.Logarithms (integerLog2')
 
-import           EERTREE.Node.Internal.Weakly
+-- import           EERTREE.Node.Internal.Weakly
 import           EERTREE.Symbol
+import Unsafe.Coerce (unsafeCoerce)
+
+type Weakly a = a
+
+applyWeakly :: (a -> b) -> a -> Weakly b
+applyWeakly = id
+
+fromWeakly :: Weakly b -> b
+fromWeakly = id
 
 -- $setup
 -- >>> :set -XTypeApplications -XDataKinds
@@ -41,8 +53,8 @@ data Node (n :: Nat) = Node
   , len       :: !Int
   , value     :: Seq (Symbol n)
   , parent    :: Maybe (Symbol n, Node n)
-  , ancestors :: Vector (Node n)
-  , edges     :: Vector (Weakly (Node n))
+  , ancestors :: !(Vector (Node n))
+  , edges     :: !(Vector (Weakly (Node n)))
   , links     :: IntMap (Node n)
   } deriving (Generic)
 
@@ -254,8 +266,8 @@ mkDirectLinks c parentNode =
 -- fromPalindrome []
 -- >>> edge 1 (evenNode @2)
 -- fromPalindrome [1,1]
-evenNode :: forall n. KnownNat n => Node n
-evenNode = Node
+mkEvenNode :: forall n. KnownNat n => Node n
+mkEvenNode = Node
   { index = 1
   , len   = 0
   , value = Seq.empty
@@ -276,8 +288,8 @@ evenNode = Node
 --
 -- >>> oddNode @2
 -- oddNode
-oddNode :: forall n. KnownNat n => Node n
-oddNode = Node
+mkOddNode :: forall n. KnownNat n => Node n
+mkOddNode = Node
   { index = -1
   , len   = -1
   , value = Seq.empty
@@ -286,5 +298,34 @@ oddNode = Node
   , edges = Vector.fromListN n [ applyWeakly (mkEdge c) oddNode | c <- alphabet ]
   , links = IntMap.fromList [ (coerce c, oddNode) | c <- alphabet @n ]
   }
+  where
+    n = fromInteger (natVal (Proxy @n))
+
+data SomeNode where
+  SomeNode :: Node n -> SomeNode
+
+oddNodes :: Vector SomeNode
+oddNodes = Vector.fromList
+  [ SomeNode (mkOddNode @n)
+  | n <- [0..2048]
+  , Just (SomeNat (_ :: Proxy n)) <- [someNatVal n]]
+
+oddNode :: forall n. KnownNat n => Node n
+oddNode =
+  case oddNodes Vector.! n of
+    SomeNode node -> unsafeCoerce node
+  where
+    n = fromInteger (natVal (Proxy @n))
+
+evenNodes :: Vector SomeNode
+evenNodes = Vector.fromList
+  [ SomeNode (mkEvenNode @n)
+  | n <- [0..2048]
+  , Just (SomeNat (_ :: Proxy n)) <- [someNatVal n]]
+
+evenNode :: forall n. KnownNat n => Node n
+evenNode =
+  case evenNodes Vector.! n of
+    SomeNode node -> unsafeCoerce node
   where
     n = fromInteger (natVal (Proxy @n))
