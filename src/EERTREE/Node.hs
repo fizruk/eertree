@@ -31,17 +31,9 @@ import           GHC.Generics
 import           GHC.TypeLits                 (KnownNat, Nat, natVal, someNatVal, SomeNat(..))
 import           Math.NumberTheory.Logarithms (integerLog2')
 
--- import           EERTREE.Node.Internal.Weakly
+import           EERTREE.Node.Internal.Weakly
 import           EERTREE.Symbol
 import Unsafe.Coerce (unsafeCoerce)
-
-type Weakly a = a
-
-applyWeakly :: (a -> b) -> a -> Weakly b
-applyWeakly = id
-
-fromWeakly :: Weakly b -> b
-fromWeakly = id
 
 -- $setup
 -- >>> :set -XTypeApplications -XDataKinds
