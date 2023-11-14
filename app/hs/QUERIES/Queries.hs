@@ -38,15 +38,18 @@ palindromicSuffixes node
     | otherwise = []
 
 updatePalSuffixesCount :: (MonadState ([(EERTREE n, Int)], Map Integer Int) m, KnownNat n) => Node n -> m Int
-updatePalSuffixesCount node = do
-    (_, tab) <- get
-    let i = index node
-    case Map.lookup i tab of
-        Nothing -> do
-            let n = length (palindromicSuffixes node)
-            modify (\(x, tab) -> (x, Map.insert i n tab))
-            return n
-        Just n -> return n
+updatePalSuffixesCount node
+    | len node <= 0 = return 0
+    | otherwise = do
+        (_, tab) <- get
+        let i = index node
+        case Map.lookup i tab of
+            Nothing -> do
+                k <- updatePalSuffixesCount (link node)
+                let !n = k + 1
+                modify (\(x, tab) -> (x, Map.insert i n tab))
+                return n
+            Just n -> return n
 
 main :: IO ()
 main = do
