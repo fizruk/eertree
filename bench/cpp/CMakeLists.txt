@@ -5,7 +5,6 @@ add_executable(bench1 ./simple/bench1.cpp)
 add_executable(bench2 ./simple/bench2.cpp)
 add_executable(bench3 ./A216264/bench1.cpp)
 add_executable(bench4 ./A216264/bench2.cpp)
-add_executable(bench5 ./Msubstr/bench.cpp)
 
 # Link against the required package
 target_link_libraries(your_executable ${YourPackage_LIBRARIES})
@@ -26,10 +25,8 @@ set(SOURCES
 ./simple/bench2.cpp
 ./A216264/bench1.cpp
 ./A216264/bench2.cpp
-./Msubstr/bench.cpp
 )
 target_link_libraries(bench1 benchmark::benchmark)
 target_link_libraries(bench2 benchmark::benchmark)
 target_link_libraries(bench3 benchmark::benchmark)
 target_link_libraries(bench4 benchmark::benchmark)
-target_link_libraries(bench5 benchmark::benchmark)

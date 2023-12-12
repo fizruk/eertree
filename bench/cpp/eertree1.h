@@ -7,7 +7,7 @@ complexity addition: O(n * m) where m is the maximum depth of palindromic suffix
 #include <iostream>
 #include <string>
 #include <cmath>
-#define N 30005
+#define N 50005
 
 struct Node
 {

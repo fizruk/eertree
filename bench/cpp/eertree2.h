@@ -1,141 +1,217 @@
-/*
-* Taken and adapted from https://rosettacode.org/wiki/Eertree
-* May 2023
-* C++11 code to construct an EERTREE
-*/
+/**
+This version has:
+    * Online computation of frequency.
+    * Insert and delete last.
+    * Total number of palindromes.
+    * Unique number of palindromes.
+    * Direct links
+**/
 
 #include <iostream>
-#include <functional>
-#include <map>
-#include <vector>
-constexpr int evenRoot = 0;
-constexpr int oddRoot = 1;
+#include <string>
+#include <cmath>
+#define N 30005
 
-struct Node {
-    int length;
-    std::map<char, int> edges;
+struct Node
+{
+    int start, end;
+    int len;
+
     int suffix;
-
-    Node(int l) : length(l), suffix(0) {
-        /* empty */
-    }
-
-    Node(int l, const std::map<char, int>& m, int s) : length(l), edges(m), suffix(s) {
-        /* empty */
-    }
+    int directLinks[26] = {};
+    int edges[26] = {};
 };
 
-class EERTREE {
-private:
-    std::vector<Node> eertree;
+class EERTREE
+{
+// private:
 public:
-    EERTREE(const std::string& s) {
-        std::vector<Node> tree = {
-            Node(0, {}, oddRoot),
-            Node(-1, {}, oddRoot)
-        };
-        int suffix = oddRoot;
-        int n, k;
+    Node root1;
+    Node root2;
+    Node tree[N];
+    bool addedNewNode[N];
+    int myPriorTmp[N];
+    int myPriorCurrent[N];
+    int freq[N] = {};
+    int current;
+    int pointer;
+    int total_occ;
 
-        for (size_t i = 0; i < s.length(); ++i) {
-            char c = s[i];
-            for (n = suffix; ; n = tree[n].suffix) {
-                k = tree[n].length;
-                int b = i - k - 1;
-                if (b >= 0 && s[b] == c) {
-                    break;
-                }
-            }
+    EERTREE()
+    {
+        root1.len = -1;
+        root1.suffix = 1;
 
-            auto it = tree[n].edges.find(c);
-            auto end = tree[n].edges.end();
-            if (it != end) {
-                suffix = it->second;
-                continue;
-            }
-            suffix = tree.size();
-            tree.push_back(Node(k + 2));
-            tree[n].edges[c] = suffix;
-            if (tree[suffix].length == 1) {
-                tree[suffix].suffix = 0;
-                continue;
-            }
-            while (true) {
-                n = tree[n].suffix;
-                int b = i - tree[n].length - 1;
-                if (b >= 0 && s[b] == c) {
-                    break;
-                }
-            }
-            tree[suffix].suffix = tree[n].edges[c];
+        root2.len = 0;
+        root2.suffix = 1;
+
+        tree[1] = root1;
+        tree[2] = root2;
+
+        current = 1;
+        pointer = 2;
+        total_occ = 0;
+        for(int i = 0; i < 26; i++){
+            tree[1].directLinks[i] = tree[2].directLinks[i] = 1;
         }
-
-        eertree = tree;
     }
-    std::vector<std::string> subPalindromes() {
-        const std::vector<Node>& tree = this->eertree;
-        std::vector<std::string> s;
 
-        std::function<void(int, std::string)> children;
-        children = [&children, &tree, &s](int n, std::string p) {
-            auto it = tree[n].edges.cbegin();
-            auto end = tree[n].edges.cend();
-            for (; it != end; it = std::next(it)) {
-                auto c = it->first;
-                auto m = it->second;
-
-                std::string pl = c + p + c;
-                s.push_back(pl);
-                children(m, pl);
-            }
-        };
-        children(0, "");
-
-        auto it = tree[1].edges.cbegin();
-        auto end = tree[1].edges.cend();
-        for (; it != end; it = std::next(it)) {
-            auto c = it->first;
-            auto n = it->second;
-
-            std::string ct(1, c);
-            s.push_back(ct);
-
-            children(n, ct);
-        }
-
-        return s;
+    void add_occ_current(int id)
+    {
+        if(id < 3)
+            return;
+        total_occ ++;
+        freq[id] ++;
+        add_occ_current(tree[id].suffix);
     }
-    int subPalindromesN(){
-        const std::vector<Node>& tree = this->eertree;
-        std::set<std::string> s;
 
-        std::function<void(int, std::string)> children;
-        children = [&children, &tree, &s](int n, std::string p) {
-            auto it = tree[n].edges.cbegin();
-            auto end = tree[n].edges.cend();
-            for (; it != end; it = std::next(it)) {
-                auto c = it->first;
-                auto m = it->second;
+    void minus_occ_current(int id)
+    {
+        if(id < 3)
+            return;
+        total_occ --;
+        freq[id] --;
+        minus_occ_current(tree[id].suffix);
+    }
 
-                std::string pl = c + p + c;
-                s.insert(pl);
-                children(m, pl);
-            }
-        };
-        children(0, "");
+    void insert(const std::string s, int idx)
+    {
+        /* 
+        * Search for Node X such that s[idx] X s[idx]
+        * is maximum palindrome ending at position idx
+        * iterate down the suffix link of current node to
+        * find X 
+        */
+        addedNewNode[idx] = false;
+        int tmp = current;
+        if (!(idx - tree[tmp].len >= 1 and s[idx] == s[idx - tree[tmp].len - 1]))
+        {
+            tmp = tree[tmp].directLinks[s[idx] -'a'];
+        }
+        // store the initial state of tmp and current for future deletion purposes.
+        myPriorTmp[idx] = tmp;
+        myPriorCurrent[idx] = current;
 
-        auto it = tree[1].edges.cbegin();
-        auto end = tree[1].edges.cend();
-        for (; it != end; it = std::next(it)) {
-            auto c = it->first;
-            auto n = it->second;
+        if (tree[tmp].edges[s[idx] - 'a'] != 0)
+        {
+            current = tree[tmp].edges[s[idx] - 'a'];
+            add_occ_current(current);
+            return;
+        }
+        addedNewNode[idx] = true;
+        // Creating new Node
+        pointer += 1;
+        // Making new Node as child of X with
+        tree[tmp].edges[s[idx] - 'a'] = pointer;
+        tree[pointer].len = tree[tmp].len + 2;
+        tree[pointer].end = idx;
+        tree[pointer].start = idx - tree[pointer].len + 1;
 
-            std::string ct(1, c);
-            s.insert(ct);
+        /* 
+        * Setting the suffix edge for the newly created
+        * Node tree[pointer]. Finding some String Y such that
+        * s[idx] + Y + s[idx] is longest possible
+        * palindromic suffix for newly created Node
+        */
+        tmp = tree[tmp].suffix;
 
-            children(n, ct);
+        // making new Node as current Node
+        current = pointer;
+        // freq[current] = 1;
+        // add_occ_current(current);
+        if (tree[current].len == 1)
+        {
+            tree[current].suffix = 2;
+            add_occ_current(current);
+            std::copy(tree[tree[current].suffix].directLinks, 
+                tree[tree[current].suffix].directLinks + 26, tree[current].directLinks);
+            tree[current].directLinks[s[idx] - 'a'] = 2;
+            return;
         }
 
-        return s.size();
+        if (!(idx - tree[tmp].len >= 1 and s[idx] == s[idx - tree[tmp].len - 1]))
+        {
+            tmp = tree[tmp].directLinks[s[idx] -'a'];
+        }
+        /*
+        * Now we have found string Y
+        * linking current Nodes suffix link with s[idx]+Y+s[idx]
+        */
+        tree[current].suffix = tree[tmp].edges[s[idx] - 'a'];
+        tmp = tree[current].suffix;
+        add_occ_current(current);
+                std::copy(tree[tree[current].suffix].directLinks, 
+            tree[tree[current].suffix].directLinks + 26, tree[current].directLinks);
+        tree[current].directLinks[s[idx - tree[tmp].len] - 'a'] = tree[current].suffix;
+    }
+
+    void deleteLast(const std::string s, int idx)
+    {
+        // No deletion is necessary
+        if(!addedNewNode[idx]){
+            minus_occ_current(current);
+            current = myPriorCurrent[idx];
+            return;
+        }
+
+        // Deleting latest node
+        minus_occ_current(pointer);
+        int tmp = myPriorTmp[idx];
+        tree[tmp].edges[s[idx] - 'a'] = 0;
+        pointer -= 1;
+        current = myPriorCurrent[idx];
+        addedNewNode[idx] = false;
+    }
+    
+    void resetFromNode(int index, std::string preDeletion)
+    {   
+        for (int i = preDeletion.size() - 1; i >= index; i--){
+            this->deleteLast(preDeletion, i);
+        }
+    }
+
+    void printPalindromes(const std::string &s)
+    {
+        for (int i = 3; i <= pointer; i++)
+        {
+            for (int j = tree[i].start; j <= tree[i].end; j++)
+            {
+                std::cout << s[j];
+            }
+            std::cout << std::endl;
+        }
+    }
+
+    void palindromes(const std::string &s, std::string &result)
+    {
+        for (int i = 3; i <= pointer; i++)
+        {
+            for (int j = tree[i].start; j <= tree[i].end; j++)
+            {
+                result += s[j];
+            }
+            result += '\n';
+        }
+    }
+    
+    void palindromes_freq(const std::string &s, std::string &result) {
+        for (int i = 3; i <= pointer; i++)
+        {
+            for (int j = tree[i].start; j <= tree[i].end; j++)
+            {
+                result += s[j];
+            }
+            result += ' ';
+            result += std::to_string(freq[i]);
+            result += '\n';
+        }
+    }
+
+    void palindromes_n(const std::string& s, int& NP) {
+        NP = pointer - 2;
+    }
+
+    void all_palindromes_n(const std::string& s, int& NP) {
+        NP = total_occ;
     }
 };

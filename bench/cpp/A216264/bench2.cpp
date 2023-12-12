@@ -1,8 +1,8 @@
 /*
 * Google benchmark
 * https://github.com/google/benchmark
-* This implementation does not use one tree.
-* It constructs a new tree for every new string to check if it's a rich string.
+* This implementation uses one tree for all strings.
+* It utilizes some of the past computations, could be improved on.
 */
 #include <benchmark/benchmark.h>
 #include "../eertree2.h"
@@ -11,48 +11,88 @@
 #include <ctime>
 #include <unistd.h>
 
-#define ITER_N 5
 #define BENCH_N 2
+#define ITER_N 5
 
 static void palindromes();
 
+// Create a vector of all possible strings of size len.
 static void AllStrings(std::vector<std::string>* strings, std::string str, const int len){
     if(str.size() == len){
         strings->push_back(str);
         return;
     }
-    AllStrings(strings, str + "0", len);
-    AllStrings(strings, str + "1", len);
+    AllStrings(strings, str + "a", len);
+    AllStrings(strings, str + "b", len);
 }
 
-// -- Observation: there is exactly the same number of rich strings
-// -- that start with 0 as there are those starting with 1.
-// -- That is why we can do half work (or 1/(alphabet size) in general)
-// -- and count rich strings faster.
+// Modify the tree created for the past string to suit the current string.
+static void modifyEertree(EERTREE& tree, std::string past, std::string current){
+    // std::cout<<"modify: "<< past << ' ' << current << '\n';
+    int n = 0;
+    for(int i = 0; i < past.size(); i++){
+        if(past[i] == current[i]){
+            n++;
+        }
+        else{
+            break;
+        }
+    }
+    tree.resetFromNode(n, past);
+    for(int i = n; i < current.size(); i++){
+        tree.insert(current, i);
+    }
+    return;
+}
+
+/*
+   -- Observation: there is exactly the same number of rich strings
+   -- that start with 0 as there are those starting with 1.
+   -- That is why we can do half work (or 1/(alphabet size) in general)
+   -- and count rich strings faster.
+*/
 static void palindromes(std::vector<std::string>* strings, int len)
 {
+    // Calculating number of rich strings of size n
+    EERTREE tree;
     int n_rich_strings = 0;
-    for(int i = 0; i < strings->size(); i ++){
-        auto tree = new EERTREE((*strings)[i]);
-        int sub_palindromes_n = tree->subPalindromesN();
-        if(sub_palindromes_n == (*strings)[i].size()){
+    /*
+        Check if the first string in the vector of all possible
+        strings of size n is a rich string.
+    */
+    for(int i = 0; i < (*strings)[0].size(); i ++){
+        tree.insert((*strings)[0], i);
+    }
+    int x = 0;
+    tree.palindromes_n((*strings)[0], x);
+    if(x == len){
+        n_rich_strings ++;
+    }
+    /*
+        Modify the current tree for each of the potential string
+        and check if it's a rich string.
+    */ 
+    for (int i = 1; i < strings->size(); ++i){
+        modifyEertree(tree, (*strings)[i-1], (*strings)[i]);
+        x = 0;
+        tree.palindromes_n((*strings)[i], x);
+        // Check if it's a rich string.
+        if(x == len){
             n_rich_strings ++;
         }
     }
-    // number of rich strings can be printed for verification purposes
-    // std::cout<< n_rich_strings * 2 << '\n';
     return;
 }
 
 static void bench(benchmark::State &state)
 {
     int len = state.range(0);
+    std::vector<std::string>* strings;
+    strings = new std::vector<std::string>();
     
     for (auto _ : state)
     {
-        std::vector<std::string>* strings;
-        strings = new std::vector<std::string>();
-        AllStrings(strings, "0", len);
+        AllStrings(strings, "a", len);
         palindromes(strings, len);
     }
 }
@@ -69,6 +109,7 @@ BENCHMARK(bench)
     ->Arg(8 * BENCH_N)
     ->Arg(9 * BENCH_N)
     ->Arg(10 * BENCH_N)
+    ->Arg(11 * BENCH_N)
     ->Repetitions(ITER_N)
     ->ReportAggregatesOnly(true)
     ->Unit(benchmark::kSecond); // time in seconds

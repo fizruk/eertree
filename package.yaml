@@ -67,7 +67,6 @@ executables:
     - eertree
   queries:
     main: Queries.hs
-    # main: tmp.hs
     source-dirs: app/hs/QUERIES
     ghc-options:
     - -threaded

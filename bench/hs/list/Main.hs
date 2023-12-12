@@ -62,23 +62,23 @@ mergeBenchmarkList _ lens = [ env (randomEERTREEpairIO @n len1 len2)
 
 main :: IO ()
 main = defaultMain
-  ( eertreeAt2 ++ eertreeAt4 ++
+  ( eertreeAt2 ++ eertreeAt26 ++
     mergeLeftAt2 ++ mergeRightAt2 ++ mergeAt2 ++
-    mergeLeftAt4 ++ mergeRightAt4 ++ mergeAt4
+    mergeLeftAt26 ++ mergeRightAt26 ++ mergeAt26
   )
     where
       s = 10000
 
       -- | Lists of benchmarks for eertrees of lenths 1s, 2s, 4s, 8s, and 16s
-      -- and alphabet sizes 2 and 4 respectively
+      -- and alphabet sizes 2 and 26 respectively
       eertreeAt2 = eertreeBenchmarkList (Proxy @2) powersOf2
-      eertreeAt4 = eertreeBenchmarkList (Proxy @4) powersOf2
+      eertreeAt26 = eertreeBenchmarkList (Proxy @26) powersOf2
 
       -- | List of 1s, 2s, 4s, 8s, and 16s
       powersOf2 = take 5 [ s * 2^x | x <- [0..] ]
 
       -- | Lists of benchmarks for eertree merges of varying lengths
-      -- and alphabet sizes 2 and 4 respectively.
+      -- and alphabet sizes 2 and 26 respectively.
       --
       -- "mergeLeft" means the left tree would be prepended to the right one.
       -- "mergeLeft" means the right tree would be appended to the left one.
@@ -86,9 +86,9 @@ main = defaultMain
       mergeLeftAt2  = mergeBenchmarkList (Proxy @2) rightPowersOf2
       mergeRightAt2 = mergeBenchmarkList (Proxy @2) leftPowersOf2
       mergeAt2      = mergeBenchmarkList (Proxy @2) bothPowersOf2
-      mergeLeftAt4  = mergeBenchmarkList (Proxy @4) rightPowersOf2
-      mergeRightAt4 = mergeBenchmarkList (Proxy @4) leftPowersOf2
-      mergeAt4      = mergeBenchmarkList (Proxy @4) bothPowersOf2
+      mergeLeftAt26  = mergeBenchmarkList (Proxy @26) rightPowersOf2
+      mergeRightAt26 = mergeBenchmarkList (Proxy @26) leftPowersOf2
+      mergeAt26      = mergeBenchmarkList (Proxy @26) bothPowersOf2
 
       -- | List of pairs (1s, 1s), (2s, 1s), (4s, 1s), (8s, 1s), (16s, 1s)
       leftPowersOf2 = take 5 [ (s * 2^x, s) | x <- [0..] ]
