@@ -1,10 +1,5 @@
-/*
-* Google benchmark
-* https://github.com/google/benchmark
-* This implementation uses one tree for all strings.
-* It utilizes some of the past computations, could be improved on.
-*/
-#include "eertree.h"
+#define ALPHA_BINARY
+#include "eertree_semi_pers.h"
 
 #include <iostream>
 #include <ctime>
@@ -13,17 +8,19 @@
 
 
 // Create a vector of all possible strings of size len.
-void AllStrings(std::vector<std::string>* strings, std::string str, const int len){
+void AllStrings(std::vector<std::string>* strings, std::string str, const int len)
+{
     if(str.size() == len){
         strings->push_back(str);
         return;
     }
-    AllStrings(strings, str + "a", len);
-    AllStrings(strings, str + "b", len);
+    AllStrings(strings, str + "0", len);
+    AllStrings(strings, str + "1", len);
 }
 
 // Modify the tree created for the past string to suit the current string.
-void modifyEertree(EERTREE& tree, std::string past, std::string current){
+void modifyEertree(EERTREE& tree, std::string past, std::string current)
+{
     // std::cout<<"modify: "<< past << ' ' << current << '\n';
     int n = 0;
     for(int i = 0; i < past.size(); i++){
@@ -61,7 +58,7 @@ void palindromes(std::vector<std::string>* strings, int len)
         tree.insert((*strings)[0], i);
     }
     int x = 0;
-    tree.palindromes_n((*strings)[0], x);
+    tree.unique_palindromes_n((*strings)[0], x);
     if(x == len){
         n_rich_strings ++;
     }
@@ -72,7 +69,7 @@ void palindromes(std::vector<std::string>* strings, int len)
     for (int i = 1; i < strings->size(); ++i){
         modifyEertree(tree, (*strings)[i-1], (*strings)[i]);
         x = 0;
-        tree.palindromes_n((*strings)[i], x);
+        tree.unique_palindromes_n((*strings)[i], x);
         // Check if it's a rich string.
         if(x == len){
             n_rich_strings ++;
@@ -83,12 +80,17 @@ void palindromes(std::vector<std::string>* strings, int len)
     return;
 }
 
+void compute_rich_strings_of(int len)
+{
+    std::vector<std::string>* strings;
+    strings = new std::vector<std::string>();
+    AllStrings(strings, "0", len);
+    palindromes(strings, len);
+}
+
 int main(){
     int len;
     std::cin >> len;
-    std::vector<std::string>* strings;
-    strings = new std::vector<std::string>();
-    AllStrings(strings, "a", len);
-    palindromes(strings, len);
+    compute_rich_strings_of(len);
     return 0;
 }

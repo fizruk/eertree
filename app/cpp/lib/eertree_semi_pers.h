@@ -1,24 +1,35 @@
-/**
-This version has:
-    * Offline computation of frequency.
+/*
+My nearly persistent eertree:
     * Insert and delete last
-    * Total number of palindromes.
-    * Unique number of palindromes.
-    * Uses direct links
-**/
+    * Online/offline/no frequency computation
+    * Predefined fixed size of alphabet
+    * Predefined max number of subpalindromes -> 50k
+minimal complexity addition: O(n * log n).
+(Good for queries, msubstr, and rich)
+*/
 #include <iostream>
 #include <string>
 #include <cmath>
-#define N 30005
-
+#ifdef ALPHA_LOWERCASE
+    #define N 50005
+    #define ALPHA_SIZE 26
+    #define INIT_ALPHA 'a'
+#elif defined(ALPHA_BINARY)
+    #define N 30005
+    #define ALPHA_SIZE 2
+    #define INIT_ALPHA '0'
+#else 
+    #define N 10
+    #define ALPHA_SIZE 2
+    #define INIT_ALPHA '.'
+#endif
 struct Node
 {
     int start, end;
     int len;
 
     int suffix;
-    int directLinks[26] = {};
-    int edges[26] = {};
+    int edges[ALPHA_SIZE] = {};
 };
 
 class EERTREE
@@ -31,7 +42,9 @@ public:
     bool addedNewNode[N];
     int myPriorTmp[N];
     int myPriorCurrent[N];
+    #if defined(OFFLINE_FREQ) || defined(ONLINE_FREQ)
     int freq[N] = {};
+    #endif
     int current;
     int pointer;
     int total_occ;
@@ -50,10 +63,27 @@ public:
         current = 1;
         pointer = 2;
         total_occ = 0;
-        for(int i = 0; i < 26; i++){
-            tree[1].directLinks[i] = tree[2].directLinks[i] = 1;
-        }
     }
+
+    #ifdef ONLINE_FREQ
+    void add_occ_current(int id)
+    {
+        if(id < 3)
+            return;
+        total_occ ++;
+        freq[id] ++;
+        add_occ_current(tree[id].suffix);
+    }
+
+    void minus_occ_current(int id)
+    {
+        if(id < 3)
+            return;
+        total_occ --;
+        freq[id] --;
+        minus_occ_current(tree[id].suffix);
+    }
+    #endif
 
     void insert(const std::string s, int idx)
     {
@@ -65,26 +95,35 @@ public:
         */
         addedNewNode[idx] = false;
         int tmp = current;
-        
-        if (!(idx - tree[tmp].len >= 1 and s[idx] == s[idx - tree[tmp].len - 1]))
+        while (true)
         {
-            tmp = tree[tmp].directLinks[s[idx] -'a'];
+            int currentLen = tree[tmp].len;
+            if (idx - currentLen >= 1 and s[idx] == s[idx - currentLen - 1])
+                break;
+            if(tmp == 0 && currentLen == 0)
+                break;
+            tmp = tree[tmp].suffix;
         }
-        
         // store the initial state of tmp and current for future deletion purposes.
         myPriorTmp[idx] = tmp;
         myPriorCurrent[idx] = current;
-        if (tree[tmp].edges[s[idx] - 'a'] != 0)
+
+        if (tree[tmp].edges[s[idx] - INIT_ALPHA] != 0)
         {
-            current = tree[tmp].edges[s[idx] - 'a'];
-            freq[current] ++;
+            current = tree[tmp].edges[s[idx] - INIT_ALPHA];
+            #ifdef ONLINE_FREQ
+            add_occ_current(current);
+            #endif
+            #ifdef OFFLINE_FREQ
+            freq[current]++;
+            #endif
             return;
         }
         addedNewNode[idx] = true;
         // Creating new Node
         pointer += 1;
         // Making new Node as child of X with
-        tree[tmp].edges[s[idx] - 'a'] = pointer;
+        tree[tmp].edges[s[idx] - INIT_ALPHA] = pointer;
         tree[pointer].len = tree[tmp].len + 2;
         tree[pointer].end = idx;
         tree[pointer].start = idx - tree[pointer].len + 1;
@@ -96,48 +135,58 @@ public:
         * palindromic suffix for newly created Node
         */
         tmp = tree[tmp].suffix;
+
         // making new Node as current Node
         current = pointer;
+        #ifdef OFFLINE_FREQ
+        freq[current] = 1;
+        #endif
         if (tree[current].len == 1)
         {
             tree[current].suffix = 2;
-            freq[current] ++;
-            std::copy(tree[tree[current].suffix].directLinks, 
-                tree[tree[current].suffix].directLinks + 26, tree[current].directLinks);
-            tree[current].directLinks[s[idx] - 'a'] = 2;
+            #ifdef ONLINE_FREQ
+            add_occ_current(current);
+            #endif
             return;
         }
-
-        if (!(idx - tree[tmp].len >= 1 and s[idx] == s[idx - tree[tmp].len - 1]))
+        while (true)
         {
-            tmp = tree[tmp].directLinks[s[idx] -'a'];
+            int currentLen = tree[tmp].len;
+            if (idx - currentLen >= 1 and s[idx] == s[idx - currentLen - 1])
+                break;
+            tmp = tree[tmp].suffix;
         }
-        
         /*
         * Now we have found string Y
         * linking current Nodes suffix link with s[idx]+Y+s[idx]
         */
-        tree[current].suffix = tree[tmp].edges[s[idx] - 'a'];
-        tmp = tree[current].suffix;
-        freq[current] ++;
-        std::copy(tree[tree[current].suffix].directLinks, 
-            tree[tree[current].suffix].directLinks + 26, tree[current].directLinks);
-        tree[current].directLinks[s[idx - tree[tmp].len] - 'a'] = tree[current].suffix;
+        tree[current].suffix = tree[tmp].edges[s[idx] - INIT_ALPHA];
+        #ifdef ONLINE_FREQ
+        add_occ_current(current);
+        #endif
     }
 
     void deleteLast(const std::string s, int idx)
     {
         // No deletion is necessary
         if(!addedNewNode[idx]){
-            freq[current] --;
+            #ifdef ONLINE_FREQ
+            minus_occ_current(current);
+            #elif defined(OFFLINE_FREQ)
+            freq[current]--;
+            #endif
             current = myPriorCurrent[idx];
             return;
         }
 
         // Deleting latest node
-        freq[pointer]++;
+        #ifdef ONLINE_FREQ
+        minus_occ_current(pointer);
+        #elif defined(OFFLINE_FREQ)
+        freq[pointer]--;
+        #endif
         int tmp = myPriorTmp[idx];
-        tree[tmp].edges[s[idx] - 'a'] = 0;
+        tree[tmp].edges[s[idx] - INIT_ALPHA] = 0;
         pointer -= 1;
         current = myPriorCurrent[idx];
         addedNewNode[idx] = false;
@@ -150,17 +199,6 @@ public:
         }
     }
 
-    void printPalindromes(const std::string &s)
-    {
-        for (int i = 3; i <= pointer; i++)
-        {
-            for (int j = tree[i].start; j <= tree[i].end; j++)
-            {
-                std::cout << s[j];
-            }
-            std::cout << std::endl;
-        }
-    }
 
     void palindromes(const std::string &s, std::string &result)
     {
@@ -173,7 +211,8 @@ public:
             result += '\n';
         }
     }
-    
+
+    #if defined(ONLINE_FREQ) || defined(OFFLINE_FREQ)
     void palindromes_freq(const std::string &s, std::string &result) {
         for (int i = 3; i <= pointer; i++)
         {
@@ -187,7 +226,17 @@ public:
         }
     }
     
-    void compute_freq()
+    void all_palindromes_n(const std::string& s, int& NP) {
+        NP = total_occ;
+    }
+    #endif
+    
+    void unique_palindromes_n(const std::string& s, int& NP) {
+        NP = pointer - 2;
+    }
+    
+    #ifdef OFFLINE_FREQ
+    void compute_offline_freq()
     {
         for (int i = pointer; i >= 3; i--)
         {
@@ -195,13 +244,5 @@ public:
             total_occ += freq[i];
         }
     }
-
-    void palindromes_n(const std::string& s, int& NP) {
-        NP = pointer - 2;
-    }
-
-    void all_palindromes_n(const std::string& s, int& NP) {
-        NP = total_occ;
-    }
-
+    #endif
 };
