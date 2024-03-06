@@ -32,7 +32,7 @@ import           EERTREE.Simple
 -- This should run in \(\mathcal{O}(n)\) memory
 -- with garbage collector working normally.
 --
--- >>> a216264 15
+-- >>> a216264' 15
 -- [1,2,4,8,16,32,64,128,252,488,932,1756,3246,5916,10618]
 a216264 :: Int -> Int -> [Int]
 a216264 cores n = a216264' startLength ++ map (*2) halves
