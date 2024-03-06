@@ -6,9 +6,17 @@
 #define ALPHA_LOWERCASE
 #define OFFLINE_FREQ
 
+#ifdef EERTREE_SEMI_PERS
+#include "eertree_semi_pers.h" 
+#elif defined(EERTREE_DIRECT)
 #include "eertree_direct.h"
+#else 
+#include "eertree_classic.h"
+#endif
+
 #include <iostream>
 #include <string>
+
 #define fst first 
 #define snd second 
 
@@ -39,17 +47,4 @@ void get_msubstr(std::string str, std::pair<int, int>& res)
     }
     res = calc_mubstr(&eertree, str);
 
-}
-
-int main()
-{
-    int t;
-    scanf("%d", &t);
-    while (t--) {
-        std::string str;
-        std::cin >> str;
-        std::pair<int, int> res;
-        get_msubstr(str, res);
-        printf("%d %d\n", res.fst, res.snd);
-    }
 }

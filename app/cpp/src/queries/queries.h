@@ -1,7 +1,12 @@
 #define ALPHA_LOWERCASE
 #define ONLINE_FREQ
 
+#ifdef EERTREE_SEMI_PERS
 #include "eertree_semi_pers.h"
+#else
+#include "eertree_direct.h"
+#endif
+
 #include <iostream>
 #include <string>
 
@@ -29,16 +34,8 @@ void process_queries(int& q, std::string& queries)
         }
         int NP = 0;
         eertree.all_palindromes_n(current_string, NP);
-        // optional for verification
+        #ifndef BENCH_RUN
         std::cout << NP << ' ';
+        #endif
     }
-}
-
-int main()
-{
-    int q;
-    std::string queries;
-    std::cin >> q >> queries;
-    process_queries(q, queries);
-    return 0;
 }

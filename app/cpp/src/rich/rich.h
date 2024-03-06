@@ -1,6 +1,9 @@
 #define ALPHA_BINARY
+#ifdef EERTREE_SEMI_PERS
 #include "eertree_semi_pers.h"
-
+#else
+#include "eertree_direct.h"
+#endif
 #include <iostream>
 #include <ctime>
 #include <unistd.h>
@@ -86,11 +89,4 @@ void compute_rich_strings_of(int len)
     strings = new std::vector<std::string>();
     AllStrings(strings, "0", len);
     palindromes(strings, len);
-}
-
-int main(){
-    int len;
-    std::cin >> len;
-    compute_rich_strings_of(len);
-    return 0;
 }
