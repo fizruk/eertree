@@ -3,17 +3,21 @@
 * https://github.com/google/benchmark
 */
 #include <benchmark/benchmark.h>
-#include "../eertree1.h"
+#define ALPHA_LOWERCASE
 
+#ifdef EERTREE_SEMI_PERS
+#include "eertree_semi_pers.h" 
+#elif defined(EERTREE_DIRECT)
+#include "eertree_direct.h"
+#else 
+#include "eertree_classic.h"
+#endif
 #include <iostream>
 #include <ctime>
 #include <unistd.h>
 
-#define BENCH_N 10000
-#define ITER_N 20
-
-static std::string randomString(const int len);
-static void palindromes();
+#define BENCH_N 1000
+#define ITER_N 10
 
 static std::string randomString(const int len)
 {
@@ -24,7 +28,7 @@ static std::string randomString(const int len)
     static const std::string alphaFull = "abcdefghijklmnopqrstuvwxyz";
 
     // Select alphabet size here
-    static const std::string alpha = alphaFull.substr(0, 4);
+    static const std::string alpha = alphaFull;
 
     srand((unsigned)time(NULL) * getpid());
 
@@ -32,20 +36,22 @@ static std::string randomString(const int len)
 
     for (int i = 0; i < len; ++i)
     {
-        s += alpha[rand() % (sizeof(alpha) / 8)];
+        s += alpha[rand() % (sizeof(alpha)/8)];
     }
 
     return s;
 }
 
-static void palindromes(const std::string s)
+static void process_palindromes(const std::string s)
 {
     EERTREE tree;
     for (int i = 0; i < s.size(); ++i)
+    {
         tree.insert(s, i);
+    }
 
-    std::string result;
-    tree.palindromes(s, result);
+    int result;
+    tree.unique_palindromes_n(s, result);
 }
 
 static void bench(benchmark::State &state)
@@ -56,20 +62,26 @@ static void bench(benchmark::State &state)
 
     for (auto _ : state)
     {
-        palindromes(s);
+        process_palindromes(s);
     }
 }
 
 BENCHMARK(bench)
     // String lengths
-    ->Arg(BENCH_N)
+    ->Arg(1 * BENCH_N)
     ->Arg(2 * BENCH_N)
+    ->Arg(3 * BENCH_N)
     ->Arg(4 * BENCH_N)
+    ->Arg(5 * BENCH_N)
+    ->Arg(6 * BENCH_N)
+    ->Arg(7 * BENCH_N)
     ->Arg(8 * BENCH_N)
+    ->Arg(9 * BENCH_N)
+    ->Arg(10 * BENCH_N)
+    ->Arg(11 * BENCH_N)
     ->Repetitions(ITER_N)
     ->ReportAggregatesOnly(true)
     ->Unit(benchmark::kSecond); // time in seconds
-
 BENCHMARK_MAIN();
 
 // int main(int argc, char *argv[])

@@ -1,31 +1,33 @@
+CXX = g++
+CXXFLAGS = -std=c++11
+
+# todo: super long line, rewrite
+EXECS = bench-msubstr bench-msubstr-direct bench-msubstr-semi-pers bench-queries-direct bench-queries-semi-pers bench-rich-direct bench-rich-semi-pers bench-simple bench-simple-direct bench-simple-semi-pers
+
+.PHONY: all clean build run
+
+all: build
+
+build:
+	@if [ ! -d "build" ]; then \
+		mkdir build; \
+	fi
+	@cd build && cmake .. && make
+
+run: build
+	./build/bench-simple --benchmark_format=csv
+	./build/bench-simple-direct --benchmark_format=csv
+	./build/bench-simple-semi-pers --benchmark_format=csv
+	./build/bench-msubstr --benchmark_format=csv
+	./build/bench-msubstr-direct --benchmark_format=csv
+	./build/bench-msubstr-semi-pers --benchmark_format=csv
+	./build/bench-queries-direct --benchmark_format=csv
+	./build/bench-queries-semi-pers --benchmark_format=csv
+	./build/bench-rich-direct --benchmark_format=csv
+	./build/bench-rich-semi-pers --benchmark_format=csv
+
 # Cleaning
 clean:
 	rm -rf build
-
-.PHONY: build
-
-BUILD_ALL_RUN := $(shell if [ -f build/CMakeCache.txt ]; then echo "1"; else echo "0"; fi)
-
-build:
-    ifeq ($(BUILD_ALL_RUN),1)
-	$(info build/all has been run before. Running partial build...)
-	cd build && make
-    else 
-	$(info build/all has not been run before. Running build/all...)
-	$(MAKE) build/all
-    endif
-
-build/all: clean
-	mkdir -p build
-	cd build && cmake .. && make
-
-run: build
-	./build/bench1 --benchmark_format=csv
-	@echo
-	./build/bench2 --benchmark_format=csv
-	@echo
-	./build/bench3 --benchmark_format=csv
-	@echo
-	./build/bench4 --benchmark_format=csv
-	@echo
-	./build/bench5 --benchmark_format=csv
+$(EXECS): build
+	@cd build && make $@
