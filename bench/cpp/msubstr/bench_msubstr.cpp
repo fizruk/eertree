@@ -9,7 +9,7 @@
 #include <ctime>
 #include <unistd.h>
 
-#define BENCH_N 1000
+#define BENCH_N 2000
 #define ITER_N 10
 
 static std::string randomString(const int len)
