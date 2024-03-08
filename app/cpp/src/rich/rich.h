@@ -79,7 +79,9 @@ void palindromes(std::vector<std::string>* strings, int len)
         }
     }
     // Number of rich strings can be printed for verification purposes.
+    #ifndef BENCH_RUN
     std::cout<< n_rich_strings * 2 << '\n';
+    #endif
     return;
 }
 
