@@ -24,8 +24,6 @@ benchmarkGetMsubstr len = bench ("length " ++ show len) $ nfIO $ do
 
 main :: IO ()
 main = defaultMain
-  [ bgroup "getMsubstr"
-    [ benchmarkGetMsubstr 500, benchmarkGetMsubstr 1000,
-      benchmarkGetMsubstr 2000, benchmarkGetMsubstr 3000
-    ]
+  [ bgroup "Msubstr"
+    [ benchmarkGetMsubstr (n * 2000) | n <- [1..11] ]
   ]

@@ -1,8 +1,11 @@
 import Criterion.Main
 import           EERTREE.Applications
 
-benchmark :: [Int] -> Benchmark
-benchmark inputValues = bgroup "a216264'" [bench (show n) $ nf (show . a216264') n | n <- inputValues]
+benchmark :: Int -> Benchmark
+benchmark n = bench (show n) $ nf getRich n
 
 main :: IO ()
-main = defaultMain [benchmark [2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22]]
+main = defaultMain
+    [bgroup "Rich"
+        [benchmark  (n * 2) | n <- [1..11]]
+    ]

@@ -160,3 +160,14 @@ benchmarks:
     dependencies:
     - criterion
     - eertree
+  queries-bench:
+    main:         Main.hs
+    source-dirs: bench/hs/queries
+    ghc-options:
+    - -threaded
+    - -O2
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - criterion
+    - eertree
