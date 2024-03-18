@@ -1,6 +1,5 @@
 -- add or pop characters from a string, at each step get the
 -- number of palindromes in the string
-
 {-# OPTIONS_GHC -Wall #-}
 {-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE BangPatterns           #-}
@@ -11,6 +10,7 @@
 
 module Main where
 
+import EERTREE.ApplicationsDE (updatePalSuffixesCount)
 import Control.Monad.State
 import Data.Map (Map)
 import qualified Data.Map as Map
@@ -19,38 +19,7 @@ import EERTREE.Node
 import GHC.TypeLits    (KnownNat)
 import EERTREE.Symbol
 
--- getNumberOfPalindromes :: KnownNat n => EERTREE n -> Int
--- getNumberOfPalindromes tree = sum $ map snd (frequency tree)
-
--- processQueries :: KnownNat n => Int -> EERTREE n -> IO ()
--- processQueries 0 _ = return ()
--- processQueries x tree = do
---     char <- getChar
---     let newTree = case char of
---             '-' -> popBackTreeVersion tree
---             c   -> append (Symbol (lowercaseEnglishToSymbol c)) tree
---     putStr(show (getNumberOfPalindromes newTree) ++ " ")
---     processQueries (x - 1) newTree
-
-palindromicSuffixes :: KnownNat n => Node n -> [Node n]
-palindromicSuffixes node
-    | len node > 0 = node : palindromicSuffixes (link node)
-    | otherwise = []
-
-updatePalSuffixesCount :: (MonadState ([(EERTREE n, Int)], Map Integer Int) m, KnownNat n) => Node n -> m Int
-updatePalSuffixesCount node
-    | len node <= 0 = return 0
-    | otherwise = do
-        (_, tab) <- get
-        let i = index node
-        case Map.lookup i tab of
-            Nothing -> do
-                k <- updatePalSuffixesCount (link node)
-                let !n = k + 1
-                modify (\(x, tab) -> (x, Map.insert i n tab))
-                return n
-            Just n -> return n
-
+-- For interactive queries
 main :: IO ()
 main = do
     _ <- getLine

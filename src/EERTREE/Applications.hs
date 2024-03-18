@@ -53,6 +53,10 @@ a216264' n = 1 : map (*2) halves
   where
     halves = dfsCountLevels (n - 1) (singleton 0) (richSubEERTREEs @2)
 
+-- For bench
+getRich :: Int -> Int
+getRich n = last $! a216264' n
+
 -- | Palindromic refrain:
 -- for a given string S find a palindrome P maximizing the value
 -- |P| * occ(S, P), where occ(S, P) is the number of occurences of P in S
@@ -134,6 +138,7 @@ getMsubstrPar _chunkSize input = (lenn, freq)
       ] `using` parList rpar
     (lenn, freq) = maxSubLengthSum (frequency tree)
 
+-- For bench
 getMsubstr :: String -> (Int, Int)
 getMsubstr str = (lenn, freq)
   where
