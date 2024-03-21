@@ -16,14 +16,23 @@ build:
 
 run: build
 	./build/bench-simple --benchmark_format=csv
+	@echo
 	./build/bench-simple-direct --benchmark_format=csv
+	@echo
 	./build/bench-simple-semi-pers --benchmark_format=csv
+	@echo
 	./build/bench-msubstr --benchmark_format=csv
+	@echo
 	./build/bench-msubstr-direct --benchmark_format=csv
+	@echo
 	./build/bench-msubstr-semi-pers --benchmark_format=csv
+	@echo
 	./build/bench-queries-direct --benchmark_format=csv
+	@echo
 	./build/bench-queries-semi-pers --benchmark_format=csv
+	@echo
 	./build/bench-rich-direct --benchmark_format=csv
+	@echo
 	./build/bench-rich-semi-pers --benchmark_format=csv
 
 # Cleaning
