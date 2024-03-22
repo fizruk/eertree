@@ -32,11 +32,14 @@ dependencies:
 - QuickCheck
 - integer-logarithms
 - deepseq
+- mtl
+- parallel
+- text
 
 executables:
-  a216264:
-    main:         A216264.hs
-    source-dirs:  app
+  rich:
+    main:         rich.hs
+    source-dirs:  app/hs/rich
     ghc-options:
       - -O2
       - -threaded
@@ -44,7 +47,32 @@ executables:
       - -with-rtsopts=-N
     dependencies:
       - eertree
-
+  msubstr:
+    main:        Msubstr.hs
+    source-dirs: app/hs/msubstr
+    ghc-options:
+    # - -threaded
+    - -O2
+    dependencies:
+    - eertree
+  msubstr-par:
+    main:        MsubstrPar.hs
+    source-dirs: app/hs/msubstr-par
+    ghc-options:
+    - -threaded
+    - -O2
+    # - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - eertree
+  queries:
+    main: Queries.hs
+    source-dirs: app/hs/queries
+    ghc-options:
+    - -threaded
+    - -O2
+    dependencies:
+    - eertree
 library:
   source-dirs: src
   ghc-options:
@@ -76,9 +104,65 @@ tests:
     - template-haskell
 
 benchmarks:
-  bench:
-    main:                Main.hs
-    source-dirs:         bench
+  simple:
+    main:        Main.hs
+    source-dirs: bench/hs/simple
+    ghc-options:
+    - -threaded
+    - -O2
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - criterion
+    - eertree
+  list:
+    main:        Main.hs
+    source-dirs: bench/hs/list
+    ghc-options:
+    - -threaded
+    - -O2
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - criterion
+    - eertree
+
+  node:
+    main:        Main.hs
+    source-dirs: bench/hs/node
+    ghc-options:
+    - -threaded
+    - -O2
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - criterion
+    - eertree
+  rich-bench:
+    main:         Main.hs
+    source-dirs: bench/hs/rich
+    ghc-options:
+    - -threaded
+    - -O2
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - criterion
+    - eertree
+  msubstr-bench:
+    main:         Main.hs
+    source-dirs: bench/hs/msubstr
+    ghc-options:
+    - -threaded
+    - -O2
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - criterion
+    - eertree
+  queries-bench:
+    main:         Main.hs
+    source-dirs: bench/hs/queries
     ghc-options:
     - -threaded
     - -O2

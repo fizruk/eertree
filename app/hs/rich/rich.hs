@@ -2,8 +2,9 @@
 module Main where
 
 import           Data.List      (intercalate)
-import           EERTREE.Simple
+import           EERTREE.Applications
 import           System.IO      (hFlush, stdout)
+import GHC.Conc (numCapabilities)
 
 main :: IO ()
 main = do
@@ -11,4 +12,4 @@ main = do
   putStr "n = "
   hFlush stdout
   n <- read <$> getLine
-  putStrLn (intercalate ", " (map show (a216264 n)))
+  putStrLn (intercalate ", " (map show (a216264 numCapabilities n)))

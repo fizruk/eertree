@@ -5,21 +5,16 @@
 module EERTREE.Simple where
 
 import           Control.DeepSeq             (NFData)
-import           Data.Char                   (digitToInt)
 import qualified Data.Foldable               as F
-import           Data.List                   (maximumBy, nub)
+import           Data.List                   (nub)
 import           Data.Map                    (Map)
 import qualified Data.Map                    as Map
-import           Data.Ord                    (comparing)
 import           Data.Sequence               (Seq)
 import qualified Data.Sequence               as Seq
 import           Data.String                 (IsString (..))
 import           GHC.Generics                (Generic)
 import           GHC.TypeLits                (KnownNat)
 
-import           Control.Monad.ST            (runST)
-import qualified Data.Vector.Unboxed         as UVector
-import qualified Data.Vector.Unboxed.Mutable as MVector
 
 import           EERTREE.Node
 import           EERTREE.Symbol
@@ -35,6 +30,8 @@ data EERTREE n = EERTREE
   , strReversedPrefix :: Seq (Symbol n) -- ^ Prefix, preceding maximum palindromic suffix
   , strSuffix         :: Seq (Symbol n) -- ^ Suffix, following maximum palindromic prefix.
   , palindromes       :: [Node n]       -- ^ Accumulated list of encountered palindromes.
+  -- | history is only for append and pop_back, does not get reversed with eertree.
+  , history           :: [EERTREE n]    -- ^ History of previous eertrees
   } deriving (Eq, Show, Generic)
 instance NFData (EERTREE n)
 
@@ -50,6 +47,7 @@ empty = EERTREE
   , strReversedPrefix  = Seq.empty
   , strSuffix          = Seq.empty
   , palindromes        = []
+  , history = []
   }
 
 -- | An eertree for a singleton string.
@@ -71,7 +69,7 @@ eertree = foldr prepend empty
 -- >>> eertreeFromString @2 "01001" == eertree @2 [0,1,0,0,1]
 -- True
 eertreeFromString :: KnownNat n => String -> EERTREE n
-eertreeFromString = foldr (prepend . Symbol . digitToInt) empty
+eertreeFromString = foldr (prepend . Symbol . charToInt) empty
 
 -- | EERTREE of a reversed string
 --
@@ -82,6 +80,7 @@ reverseEERTREE t = t { maxPrefix          = maxSuffix t
                      , maxSuffix          = maxPrefix t
                      , strReversedPrefix  = strSuffix t
                      , strSuffix          = strReversedPrefix t
+                     , history = history t
                      }
 
 -- | Get the string back from an eertree.
@@ -119,6 +118,7 @@ prepend c t =
       , strReversedPrefix  = if null cs then Seq.empty else strReversedPrefix t Seq.|> c
       , strSuffix          = cs
       , palindromes        = newMaxPrefix : palindromes t
+      , history = history t
       } where
         newMaxPrefix = edge c (maxPrefix t)
     _ ->
@@ -130,6 +130,7 @@ prepend c t =
           , strReversedPrefix  = if null newStrSuffix then Seq.empty else strReversedPrefix t Seq.|> c
           , strSuffix          = newStrSuffix
           , palindromes        = newMaxPrefix : palindromes t
+          , history = history t
           } where
               newStrSuffix = Seq.drop (n - 1) (value (maxPrefix t)) <> strSuffix t
               n = len newMaxPrefix
@@ -140,10 +141,21 @@ prepend c t =
 -- >>> fromEERTREE (append 0 (eertreeFromString @2 "01001"))
 -- [0,1,0,0,1,0]
 append :: KnownNat n => Symbol n -> EERTREE n -> EERTREE n
-append c t = reverseEERTREE (prepend c (reverseEERTREE t))
+append c t =  reverseEERTREE (prepend c (reverseEERTREE (addTreeVersion t)))
+
+popBackTreeVersion :: KnownNat n => EERTREE n -> EERTREE n
+popBackTreeVersion t = 
+  case history t of
+    []     -> empty
+    [_] -> empty
+    (v1:vs) -> v1 { history = vs }
+
+-- | Add a new version to the history
+addTreeVersion :: KnownNat n => EERTREE n -> EERTREE n
+addTreeVersion t = t { history = t : history t }
 
 -- | Merge two eertrees in O(1) on average
---
+-- TODO: add history management to merge
 -- >>> fromEERTREE (merge @2 "0110100" "11001001")
 -- [0,1,1,0,1,0,0,1,1,0,0,1,0,0,1]
 --
@@ -234,47 +246,6 @@ mergeLinear t1 t2
 subpalindromes :: KnownNat n => [Symbol n] -> [[Symbol n]]
 subpalindromes = map (F.toList . value) . nub . palindromes . eertree
 
--- | Compute first \(n\) elements of <https://oeis.org/A216264 A216264 sequence>
--- (binary rich strings count for \(n = 0, 1, \ldots\)).
---
--- For memory efficiency the whole sequence segment
--- is computed at once and not lazily as one might expect.
---
--- This should run in \(\mathcal{O}(n)\) memory
--- with garbage collector working normally.
---
--- >>> a216264 15
--- [1,2,4,8,16,32,64,128,252,488,932,1756,3246,5916,10618]
-a216264 :: Int -> [Int]
-a216264 n = 1 : map (*2) halves
-  where
-    -- Observation: there is exactly the same number of rich strings
-    -- that start with 0 as there are those starting with 1.
-    -- That is why we can do half work (or 1/(alphabet size) in general)
-    -- and count rich strings faster.
-    halves = dfsCountLevels (n - 1) (singleton 0) (richSubEERTREEs @2)
-
--- | Palindromic refrain:
--- for a given string S find a palindrome P maximizing the value
--- |P| * occ(S, P), where occ(S, P) is the number of occurences of P in S
---
--- >>> palindromicRefrain (eertreeFromString @3 "0102010")
--- (fromPalindrome [0,1,0,2,0,1,0],7)
---
--- >>> palindromicRefrain (eertreeFromString @1 "000")
--- (fromPalindrome [0,0],4)
-palindromicRefrain :: KnownNat n => EERTREE n -> (Node n, Int)
-palindromicRefrain t = maximumBy (comparing snd) (zip unique refrain)
-  where
-    -- | Count palindrome frequency
-    occ = frequency' t
-
-    -- | Unique palindromes
-    unique = map fst (Map.elems occ)
-
-    -- | Calculate refrains
-    refrain = map (\(p, f) -> f * len p) (Map.elems occ)
-
 -- | Compute the number of occurences for each subpalindrome
 --
 -- >>> frequency (eertreeFromString @2 "10101")
@@ -296,39 +267,3 @@ frequency' t = Map.fromListWith combine pals
     pals = map ((\(p, f) -> (index p, (p, f))) . (\n -> (n, 1))) (concatMap unfoldLinks (palindromes t))
 
     combine pair1 pair2 = (fst pair1, snd pair1 + snd pair2)
-
--- * Helpers
-
--- | Efficiently count nodes at every level of a tree using DFS.
---
--- Memory efficiency comes from the fact that in depth-first
--- traversal we don't have to store all nodes at a level
--- and only need to store a path from root to the current node.
-dfsCountLevels
-  :: Int          -- ^ Number of levels to cover (max depth).
-  -> a            -- ^ Root.
-  -> (a -> [a])   -- ^ How to get subtrees.
-  -> [Int]        -- ^ Number of elements at every level.
-dfsCountLevels k root subtrees = runST $ do
-  result <- MVector.replicate k 0
-  go result 0 root
-  UVector.toList <$> UVector.freeze result
-    where
-      go v i t
-        | i >= k = return ()
-        | otherwise = do
-          MVector.modify v (+1) i
-          mapM_ (go v (i+1)) (subtrees t)
-
--- | Efficiently compute all rich eertrees that can be produced
--- from a given one by prepending a symbol to it.
---
--- Efficiency comes from the fact that we only need to check
--- that a new maximum prefix is a new palindrome.
-richSubEERTREEs :: forall n. KnownNat n => EERTREE n -> [EERTREE n]
-richSubEERTREEs t =
-  [ t'
-  | c <- alphabet @n
-  , let t' = prepend c t
-  , maxPrefix t' `notElem` palindromes t
-  ]
