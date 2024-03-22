@@ -1,6 +1,10 @@
 #define BENCH_RUN
 #include <benchmark/benchmark.h>
+#ifndef RICH_SIMPLE
 #include "./rich/rich.h"
+#else
+#include "./rich/rich_simple.h"
+#endif
 #include <iostream>
 #include <ctime>
 #include <unistd.h>

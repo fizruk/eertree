@@ -2,7 +2,7 @@ CXX = g++
 CXXFLAGS = -std=c++11
 
 # todo: super long line, rewrite
-EXECS = bench-msubstr bench-msubstr-direct bench-msubstr-semi-pers bench-queries-direct bench-queries-semi-pers bench-rich-direct bench-rich-semi-pers bench-simple bench-simple-direct bench-simple-semi-pers
+EXECS = bench-msubstr bench-msubstr-direct bench-msubstr-semi-pers bench-queries-direct bench-queries-semi-pers bench-rich-simple bench-rich-direct bench-rich-semi-pers bench-simple bench-simple-direct bench-simple-semi-pers
 
 .PHONY: all clean build run
 
@@ -30,6 +30,8 @@ run: build
 	./build/bench-queries-direct --benchmark_format=csv
 	@echo
 	./build/bench-queries-semi-pers --benchmark_format=csv
+	@echo
+	./build/bench-rich-simple --benchmark_format=csv
 	@echo
 	./build/bench-rich-direct --benchmark_format=csv
 	@echo

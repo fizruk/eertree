@@ -1,4 +1,9 @@
+#ifndef SIMPLE_RICH
 #include "rich.h"
+#else 
+#include "rich_simple.h"
+#endif
+#include <iostream>
 
 int main()
 {

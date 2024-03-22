@@ -24,6 +24,8 @@ run-queries-direct: build
 	./build/queries-direct
 run-queries-semi-pers: build
 	./build/queries-semi-pers
+run-rich-simple: build
+	./build/rich-simple
 run-rich-direct: build
 	./build/rich-direct
 run-rich-semi-pers: build
