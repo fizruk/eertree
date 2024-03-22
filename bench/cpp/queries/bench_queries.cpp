@@ -22,17 +22,17 @@ static std::string randomQueries(const int len)
 
     // Select alphabet size here
     static const std::string alpha = alphaFull;
-
+    int alpha_size = 27;
     srand((unsigned)time(NULL) * getpid());
 
     s.reserve(len);
     int real_count = 0;
     for (int i = 0; i < len; ++i)
     {
-        int x = rand() % (sizeof(alpha)/8);
+        int x = rand() % alpha_size;
         while(x == 26 && !real_count)
         {
-            x = rand() % (sizeof(alpha)/8);
+            x = rand() % alpha_size;
         }
         if(x != 26)
         {

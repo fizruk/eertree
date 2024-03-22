@@ -22,14 +22,14 @@ static std::string randomString(const int len)
 
     // Select alphabet size here
     static const std::string alpha = alphaFull;
-
+    int alpha_size = 26;
     srand((unsigned)time(NULL) * getpid());
 
     s.reserve(len);
 
     for (int i = 0; i < len; ++i)
     {
-        s += alpha[rand() % (sizeof(alpha)/8)];
+        s += alpha[rand() % alpha_size];
     }
 
     return s;

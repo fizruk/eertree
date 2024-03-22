@@ -29,14 +29,14 @@ static std::string randomString(const int len)
 
     // Select alphabet size here
     static const std::string alpha = alphaFull;
-
+    int alpha_size = 26;
     srand((unsigned)time(NULL) * getpid());
 
     s.reserve(len);
 
     for (int i = 0; i < len; ++i)
     {
-        s += alpha[rand() % (sizeof(alpha)/8)];
+        s += alpha[rand() % alpha_size];
     }
 
     return s;
@@ -47,6 +47,7 @@ static void process_palindromes(const std::string s)
     EERTREE tree;
     for (int i = 0; i < s.size(); ++i)
     {
+        // std::cout << i << '\n';
         tree.insert(s, i);
     }
 
