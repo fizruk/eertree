@@ -3,7 +3,11 @@
 * https://github.com/google/benchmark
 */
 #include <benchmark/benchmark.h>
+#ifndef BINARY
 #define ALPHA_LOWERCASE
+#else 
+#define ALPHA_BINARY
+#endif
 
 #ifdef EERTREE_SEMI_PERS
 #include "eertree_semi_pers.h" 
@@ -21,15 +25,18 @@
 
 static std::string randomString(const int len)
 {
-    /* https://stackoverflow.com/a/440240 */
-
     std::string s;
 
     static const std::string alphaFull = "abcdefghijklmnopqrstuvwxyz";
 
     // Select alphabet size here
+    #ifndef BINARY
     static const std::string alpha = alphaFull;
     int alpha_size = 26;
+    #else 
+    static const std::string alpha = "01";
+    int alpha_size = 2;
+    #endif
     srand((unsigned)time(NULL) * getpid());
 
     s.reserve(len);

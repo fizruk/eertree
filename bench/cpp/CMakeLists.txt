@@ -7,6 +7,9 @@ include_directories(${CMAKE_SOURCE_DIR}/../../app/cpp/lib)
 project(eertree_bench)
 
 # Add your source files
+add_executable(bench-simple-binary ./simple/bench_simple.cpp)
+add_executable(bench-simple-direct-binary ./simple/bench_simple.cpp)
+add_executable(bench-simple-semi-pers-binary ./simple/bench_simple.cpp)
 add_executable(bench-simple ./simple/bench_simple.cpp)
 add_executable(bench-simple-direct ./simple/bench_simple.cpp)
 add_executable(bench-simple-semi-pers ./simple/bench_simple.cpp)
@@ -20,6 +23,11 @@ add_executable(bench-rich-direct ./rich/bench_rich.cpp)
 add_executable(bench-rich-semi-pers ./rich/bench_rich.cpp)
 
 # Add the macros necessary for customization
+target_compile_definitions(bench-simple-binary PRIVATE BINARY)
+target_compile_definitions(bench-simple-direct-binary PRIVATE BINARY)
+target_compile_definitions(bench-simple-semi-pers-binary PRIVATE BINARY)
+target_compile_definitions(bench-simple-direct-binary PRIVATE EERTREE_DIRECT)
+target_compile_definitions(bench-simple-semi-pers-binary PRIVATE EERTREE_SEMI_PERS)
 target_compile_definitions(bench-simple-direct PRIVATE EERTREE_DIRECT)
 target_compile_definitions(bench-simple-semi-pers PRIVATE EERTREE_SEMI_PERS)
 target_compile_definitions(bench-msubstr-direct PRIVATE EERTREE_DIRECT)
@@ -39,6 +47,9 @@ find_package(benchmark REQUIRED)
 
 # link benchmark to all executables
 # todo: There's prb an easier way, will check later.
+target_link_libraries(bench-simple-binary benchmark::benchmark)
+target_link_libraries(bench-simple-direct-binary benchmark::benchmark)
+target_link_libraries(bench-simple-semi-pers-binary benchmark::benchmark)
 target_link_libraries(bench-simple benchmark::benchmark)
 target_link_libraries(bench-simple-direct benchmark::benchmark)
 target_link_libraries(bench-simple-semi-pers benchmark::benchmark)

@@ -53,7 +53,7 @@ main = defaultMain
     mergeLeftAt4 ++ mergeRightAt4 ++ mergeAt4
   )
     where
-      s = 10000
+      s = 2000
 
       -- | Lists of benchmarks for eertrees of lenths 1s, 2s, 4s, 8s, and 16s
       -- and alphabet sizes 2 and 26 respectively
@@ -61,7 +61,7 @@ main = defaultMain
       eertreeAt4 = eertreeBenchmarkList (Proxy @26) powersOf2
 
       -- | List of 1s, 2s, 4s, 8s, and 16s
-      powersOf2 = take 5 [ s * 2^x | x <- [0..] ]
+      powersOf2 = [ s * x | x <- [1..11] ]
 
       -- | Lists of benchmarks for eertree merges of varying lengths
       -- and alphabet sizes 2 and 26 respectively.
