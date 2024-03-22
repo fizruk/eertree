@@ -15,7 +15,7 @@ minimal complexity addition: O(n * log n).
     #define ALPHA_SIZE 26
     #define INIT_ALPHA 'a'
 #elif defined(ALPHA_BINARY)
-    #define N 30005
+    #define N 50005
     #define ALPHA_SIZE 2
     #define INIT_ALPHA '0'
 #else 
