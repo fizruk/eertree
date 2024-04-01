@@ -18,6 +18,7 @@ import           Math.NumberTheory.Logarithms (intLog2')
 import Data.Text (Text)
 import qualified Data.Text as Text
 import Control.Parallel.Strategies
+import GHC.Conc (numCapabilities)
 
 import EERTREE.Node ( Node(len) )
 import EERTREE.Symbol
@@ -32,7 +33,7 @@ import           EERTREE.Simple
 -- This should run in \(\mathcal{O}(n)\) memory
 -- with garbage collector working normally.
 --
--- >>> a216264' 15
+-- >>> a216264 2 15
 -- [1,2,4,8,16,32,64,128,252,488,932,1756,3246,5916,10618]
 a216264 :: Int -> Int -> [Int]
 a216264 cores n = a216264' startLength ++ map (*2) halves
@@ -48,14 +49,19 @@ a216264 cores n = a216264' startLength ++ map (*2) halves
       | startBits <- replicateM (startLength - 1) [0,1]   -- only works for startLength <= 7, since not all binary strings are rich starting from n = 8
       ] `using` parList rpar
 
+-- >>> a216264' 15
+-- [1,2,4,8,16,32,64,128,252,488,932,1756,3246,5916,10618]
 a216264' :: Int -> [Int]
 a216264' n = 1 : map (*2) halves
   where
     halves = dfsCountLevels (n - 1) (singleton 0) (richSubEERTREEs @2)
 
 -- For bench
-getRich :: Int -> Int
-getRich n = last $! a216264' n
+getRich :: Int -> [Int]
+getRich= a216264'
+
+getRichParallel :: Int -> [Int]
+getRichParallel = a216264 numCapabilities
 
 -- | Palindromic refrain:
 -- for a given string S find a palindrome P maximizing the value
