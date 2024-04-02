@@ -8,7 +8,7 @@ import           Data.Proxy      (Proxy (..))
 import           GHC.TypeLits    (KnownNat, natVal)
 
 import           EERTREE.Random
-import           EERTREE.Simple
+import           EERTREE.Tree.Bidirectional
 import           EERTREE.Symbol
 
 import           Criterion.Main

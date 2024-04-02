@@ -5,15 +5,23 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TypeApplications    #-}
 
-module EERTREE.ApplicationsDE where
+module EERTREE.Applications.Unidirectional where
 
 import Control.Monad.State
 import Data.Map (Map)
 import qualified Data.Map as Map
-import EERTREE.List
+import EERTREE.Tree.Unidirectional
 import EERTREE.Node
 import GHC.TypeLits    (KnownNat)
+import           Data.Ord                    (comparing)
+import           Data.List                   (maximumBy)
+import Data.Foldable as F
 import EERTREE.Symbol
+import Control.Parallel.Strategies
+import GHC.Conc (numCapabilities)
+import Data.Text.Lazy (Text)
+import qualified Data.Text.Lazy as Text
+import qualified Data.Text.Lazy.IO as Text
 
 -- | Online updating of palindromic suffixes
 palindromicSuffixes :: KnownNat n => Node n -> [Node n]
@@ -66,3 +74,34 @@ getQueries queries =
         finalState = execState (mapM_ processQuery queries) initialState
         results = map snd $ Map.toList (snd finalState) 
     in results
+
+------------------------------------------
+
+countMax :: Ord a => a -> [a] -> (a, Int)
+countMax z = foldl' step (z, 1)
+  where
+    step acc@(x, n) y
+      | y > x = (y, 1)
+      | y == x = (x, n + 1)
+      | otherwise = acc
+
+countMax' :: Ord a => [a] -> (a, Int)
+countMax' [] = error "empty list"
+countMax' (x:xs) = countMax x xs
+
+-- For bench
+getMsubstr :: String -> (Int, Int)
+getMsubstr str = countMax' (map len (palindromes tree))
+  where
+    tree = eertreeFromString @26 str
+
+getMsubstrPar :: Text -> (Int, Int)
+getMsubstrPar input = countMax' (map len (palindromes tree))
+  where
+    cores = numCapabilities
+    chunkSize = Text.length input `div` fromIntegral cores
+    tree = foldr merge empty chunks
+    chunks =
+      [ eertreeFromString @26 (Text.unpack chunk)
+      | chunk <- Text.chunksOf chunkSize input
+      ] `using` parList rpar

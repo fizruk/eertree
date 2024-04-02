@@ -7,7 +7,7 @@ import           Data.Proxy      (Proxy)
 import           GHC.TypeLits    (KnownNat)
 
 import           EERTREE.Node
-import           EERTREE.Simple
+import           EERTREE.Tree.Bidirectional
 import           EERTREE.Symbol
 
 import           Test.QuickCheck

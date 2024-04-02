@@ -7,7 +7,7 @@ module Main where
 import           Data.Proxy      (Proxy (..))
 import           GHC.TypeLits    (KnownNat, natVal)
 
-import           EERTREE.List
+import           EERTREE.Tree.Unidirectional
 import           EERTREE.Random  hiding (randomEERTREE, randomEERTREEpairIO)
 import           EERTREE.Symbol
 

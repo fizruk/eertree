@@ -2,14 +2,16 @@
 {-# LANGUAGE DeriveGeneric       #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
-module EERTREE.List where
+module EERTREE.Tree.Unidirectional where
 
 import           Control.DeepSeq (NFData)
 import qualified Data.Foldable   as F
 import           Data.String     (IsString (..))
+import           Data.List                   (nub)
 import           GHC.Generics    (Generic)
 import           GHC.TypeLits    (KnownNat)
-
+import           Data.Map                    (Map)
+import qualified Data.Map                    as Map
 import           EERTREE.Node
 import           EERTREE.Symbol
 
@@ -133,3 +135,34 @@ mergeLinear :: KnownNat n => EERTREE n -> EERTREE n -> EERTREE n
 mergeLinear t1 t2 = foldr prepend t2 s1
   where
     s1 = fromEERTREE t1
+
+-- * Applications
+
+-- | Unique subpalindromes of a string.
+--
+-- >>> subpalindromes @2 [0,1,0,0,1]
+-- [[0,1,0],[1,0,0,1],[0,0],[0],[1]]
+subpalindromes :: KnownNat n => [Symbol n] -> [[Symbol n]]
+subpalindromes = map (F.toList . value) . nub . palindromes . eertree
+
+-- | Compute the number of occurences for each subpalindrome
+--
+-- >>> frequency (eertreeFromString @2 "10101")
+-- [(fromPalindrome [1,0,1,0,1],1),(fromPalindrome [0,1,0],1),(fromPalindrome [1,0,1],2),(fromPalindrome [1],3),(fromPalindrome [0],2)]
+frequency :: KnownNat n => EERTREE n -> [(Node n, Int)]
+frequency = Map.elems . frequency'
+
+-- | Compute the number of occurences for each subpalindrome.
+-- Return @Map@ of frequences with Node index as a key.
+--
+-- >>> frequency' (eertreeFromString @2 "1000")
+-- fromList [(-4,(fromPalindrome [0,0,0],1)),(-3,(fromPalindrome [1],1)),(-2,(fromPalindrome [0],3)),(2,(fromPalindrome [0,0],2))]
+frequency' :: KnownNat n => EERTREE n -> Map Integer (Node n, Int)
+frequency' t = Map.fromListWith combine pals
+  where
+    unfoldLinks = takeWhile (\n -> len n > 0) . iterate link
+
+    -- Zip palindromes with their indexes
+    pals = map ((\(p, f) -> (index p, (p, f))) . (\n -> (n, 1))) (concatMap unfoldLinks (palindromes t))
+
+    combine pair1 pair2 = (fst pair1, snd pair1 + snd pair2)

@@ -2,7 +2,7 @@
 module Main where
 
 import           Data.List      (intercalate)
-import           EERTREE.Applications
+import           EERTREE.Applications.Bidirectional
 import           System.IO      (hFlush, stdout)
 import GHC.Conc (numCapabilities)
 

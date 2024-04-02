@@ -2,7 +2,7 @@
 {-# LANGUAGE DeriveGeneric       #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
-module EERTREE.Simple where
+module EERTREE.Tree.Bidirectional where
 
 import           Control.DeepSeq             (NFData)
 import qualified Data.Foldable               as F

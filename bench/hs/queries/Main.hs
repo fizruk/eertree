@@ -5,7 +5,7 @@ module Main where
 import           GHC.TypeLits    (KnownNat, natVal)
 import           Control.Monad   (replicateM)
 
-import           EERTREE.ApplicationsDE
+import           EERTREE.Applications.Unidirectional
 import           Criterion.Main
 import           Test.QuickCheck
 

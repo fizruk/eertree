@@ -10,11 +10,11 @@
 
 module Main where
 
-import EERTREE.ApplicationsDE (updatePalSuffixesCount)
+import EERTREE.Applications.Unidirectional (updatePalSuffixesCount)
 import Control.Monad.State
 import Data.Map (Map)
 import qualified Data.Map as Map
-import EERTREE.List
+import EERTREE.Tree.Unidirectional
 import EERTREE.Node
 import GHC.TypeLits    (KnownNat)
 import EERTREE.Symbol

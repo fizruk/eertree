@@ -11,7 +11,7 @@ import           Data.Proxy
 import qualified Data.Set                    as S
 import           GHC.TypeLits                (KnownNat, natVal)
 
-import EERTREE.Simple
+import EERTREE.Tree.Bidirectional
 
 main :: IO ()
 main = hspec $ do

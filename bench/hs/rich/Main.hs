@@ -1,6 +1,5 @@
 import Criterion.Main
-import           EERTREE.Applications
-import EERTREE.Applications (getRich, getRichParallel)
+import EERTREE.Applications.Bidirectional (getRich, getRichParallel)
 
 benchmark :: Int -> Benchmark
 benchmark n = bench (show n) $ nf getRich n

@@ -2,7 +2,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
 {-# LANGUAGE BangPatterns    #-}
-module EERTREE.Applications where
+module EERTREE.Applications.Bidirectional where
 
 import Control.DeepSeq (force)
 import Control.Monad (replicateM)
@@ -22,7 +22,7 @@ import GHC.Conc (numCapabilities)
 
 import EERTREE.Node ( Node(len) )
 import EERTREE.Symbol
-import           EERTREE.Simple
+import           EERTREE.Tree.Bidirectional
 
 -- | Compute first \(n\) elements of <https://oeis.org/A216264 A216264 sequence>
 -- (binary rich strings count for \(n = 0, 1, \ldots\)).
@@ -120,33 +120,3 @@ richSubEERTREEs t =
   , let t' = prepend c t
   , maxPrefix t' `notElem` palindromes t
   ]
-
--- Return the length of the longest palindromic substring
--- and the number of substrings with such length.
-maxSubLengthSum :: [(Node n, Int)] -> (Int, Int)
-maxSubLengthSum listFreq =
-  let
-    maxLength = maximumBy (comparing (len . fst)) listFreq
-    -- Get the nodes that have the maximum length only
-    maxNodes = filter (\(node, _) -> len node == len (fst maxLength)) listFreq
-    freqValues = map snd maxNodes
-  in
-    (len (fst maxLength), sum freqValues)
-
-getMsubstrPar :: Int -> Text -> (Int, Int)
-getMsubstrPar _chunkSize input = (lenn, freq)
-  where
-    chunkSize = Text.length input `div` 16
-    tree = foldr merge empty chunks
-    chunks =
-      [ eertreeFromString @26 (Text.unpack chunk)
-      | chunk <- Text.chunksOf chunkSize input
-      ] `using` parList rpar
-    (lenn, freq) = maxSubLengthSum (frequency tree)
-
--- For bench
-getMsubstr :: String -> (Int, Int)
-getMsubstr str = (lenn, freq)
-  where
-    tree = eertreeFromString @26 str
-    (lenn, freq) = maxSubLengthSum (frequency tree)

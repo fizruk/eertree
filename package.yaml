@@ -104,9 +104,9 @@ tests:
     - template-haskell
 
 benchmarks:
-  simple:
+  bidirectional:
     main:        Main.hs
-    source-dirs: bench/hs/simple
+    source-dirs: bench/hs/bidirectional
     ghc-options:
     - -threaded
     - -O2
@@ -115,9 +115,9 @@ benchmarks:
     dependencies:
     - criterion
     - eertree
-  list:
+  unidirectional:
     main:        Main.hs
-    source-dirs: bench/hs/list
+    source-dirs: bench/hs/unidirectional
     ghc-options:
     - -threaded
     - -O2
