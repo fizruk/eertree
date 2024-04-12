@@ -1,14 +1,14 @@
-name:                eertree
-version:             0.1.0.0
-github:              "fizruk/eertree"
-license:             BSD3
-author:              "Nickolay Kudasov, Timur Khazhiev"
-maintainer:          "nickolay.kudasov@gmail.com"
-copyright:           "2019 Nickolay Kudasov, Timur Khazhiev"
+name: eertree
+version: 0.1.0.0
+github: "fizruk/eertree"
+license: BSD3
+author: "Nickolay Kudasov, Timur Khazhiev"
+maintainer: "nickolay.kudasov@gmail.com"
+copyright: "2019 Nickolay Kudasov, Timur Khazhiev"
 
 extra-source-files:
-- README.md
-- ChangeLog.md
+  - README.md
+  - ChangeLog.md
 
 # Metadata used when publishing your package
 # synopsis:            Short description of your package
@@ -17,7 +17,7 @@ extra-source-files:
 # To avoid duplicated efforts in documentation and dealing with the
 # complications of embedding Haddock markup inside cabal files, it is
 # common to point users to the README.md file.
-description:         Please see the README on GitHub at <https://github.com/fizruk/eertree#readme>
+description: Please see the README on GitHub at <https://github.com/fizruk/eertree#readme>
 
 custom-setup:
   dependencies:
@@ -26,20 +26,22 @@ custom-setup:
     - cabal-doctest >=1.0.2 && <1.1
 
 dependencies:
-- base >= 4.7 && < 5
-- containers
-- vector
-- QuickCheck
-- integer-logarithms
-- deepseq
-- mtl
-- parallel
-- text
+  - base >= 4.7 && < 5
+  - hashable
+  - containers
+  - unordered-containers
+  - vector
+  - QuickCheck
+  - integer-logarithms
+  - deepseq
+  - mtl
+  - parallel
+  - text
 
 executables:
   a216264:
-    main:         A216264.hs
-    source-dirs:  app/hs/A216264
+    main: A216264.hs
+    source-dirs: app/hs/A216264
     ghc-options:
       - -O2
       - -threaded
@@ -48,32 +50,32 @@ executables:
     dependencies:
       - eertree
   msubstr:
-    main:        Msubstr.hs
+    main: Msubstr.hs
     source-dirs: app/hs/MSUBSTR
     ghc-options:
-    # - -threaded
-    - -O2
+      # - -threaded
+      - -O2
     dependencies:
-    - eertree
+      - eertree
   msubstr-par:
-    main:        MsubstrPar.hs
+    main: MsubstrPar.hs
     source-dirs: app/hs/MSUBSTR-PAR
     ghc-options:
-    - -threaded
-    - -O2
-    # - -rtsopts
-    - -with-rtsopts=-N
+      - -threaded
+      - -O2
+      # - -rtsopts
+      - -with-rtsopts=-N
     dependencies:
-    - eertree
+      - eertree
   queries:
     main: Queries.hs
     # main: tmp.hs
     source-dirs: app/hs/QUERIES
     ghc-options:
-    - -threaded
-    - -O2
+      - -threaded
+      - -O2
     dependencies:
-    - eertree
+      - eertree
 library:
   source-dirs: src
   ghc-options:
@@ -81,83 +83,83 @@ library:
 
 tests:
   eertree-test:
-    main:                Spec.hs
-    source-dirs:         test
+    main: Spec.hs
+    source-dirs: test
     ghc-options:
-    - -threaded
-    - -rtsopts
-    - -with-rtsopts=-N
+      - -threaded
+      - -rtsopts
+      - -with-rtsopts=-N
     dependencies:
-    - hspec
-    - hspec-contrib
-    - HUnit
-    - eertree
+      - hspec
+      - hspec-contrib
+      - HUnit
+      - eertree
 
   doctests:
     source-dirs: test
     main: doctests.hs
     other-modules: []
     dependencies:
-    - base
-    - doctest
-    - Glob
-    - QuickCheck
-    - template-haskell
+      - base
+      - doctest
+      - Glob
+      - QuickCheck
+      - template-haskell
 
 benchmarks:
   simple:
-    main:        Main.hs
+    main: Main.hs
     source-dirs: bench/hs/simple
     ghc-options:
-    - -threaded
-    - -O2
-    - -rtsopts
-    - -with-rtsopts=-N
+      - -threaded
+      - -O2
+      - -rtsopts
+      - -with-rtsopts=-N
     dependencies:
-    - criterion
-    - eertree
+      - criterion
+      - eertree
   list:
-    main:        Main.hs
+    main: Main.hs
     source-dirs: bench/hs/list
     ghc-options:
-    - -threaded
-    - -O2
-    - -rtsopts
-    - -with-rtsopts=-N
+      - -threaded
+      - -O2
+      - -rtsopts
+      - -with-rtsopts=-N
     dependencies:
-    - criterion
-    - eertree
+      - criterion
+      - eertree
 
   node:
-    main:        Main.hs
+    main: Main.hs
     source-dirs: bench/hs/node
     ghc-options:
-    - -threaded
-    - -O2
-    - -rtsopts
-    - -with-rtsopts=-N
+      - -threaded
+      - -O2
+      - -rtsopts
+      - -with-rtsopts=-N
     dependencies:
-    - criterion
-    - eertree
+      - criterion
+      - eertree
   rich:
-    main:         Main.hs
+    main: Main.hs
     source-dirs: bench/hs/rich
     ghc-options:
-    - -threaded
-    - -O2
-    - -rtsopts
-    - -with-rtsopts=-N
+      - -threaded
+      - -O2
+      - -rtsopts
+      - -with-rtsopts=-N
     dependencies:
-    - criterion
-    - eertree
+      - criterion
+      - eertree
   msubstr-bench:
-    main:         Main.hs
+    main: Main.hs
     source-dirs: bench/hs/msubstr
     ghc-options:
-    - -threaded
-    - -O2
-    - -rtsopts
-    - -with-rtsopts=-N
+      - -threaded
+      - -O2
+      - -rtsopts
+      - -with-rtsopts=-N
     dependencies:
-    - criterion
-    - eertree
+      - criterion
+      - eertree

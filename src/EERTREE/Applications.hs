@@ -1,27 +1,32 @@
+{-# LANGUAGE BangPatterns        #-}
 {-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
-{-# LANGUAGE BangPatterns    #-}
 module EERTREE.Applications where
 
-import Control.DeepSeq (force)
-import Control.Monad (replicateM)
-import           Data.Ord                    (comparing)
-import           Data.List                   (maximumBy)
-import qualified Data.Vector.Unboxed         as UVector
-import qualified Data.Vector.Unboxed.Mutable as MVector
-import           Data.Map                    (Map)
-import qualified Data.Map                    as Map
-import           GHC.TypeLits                (KnownNat)
-import           Control.Monad.ST            (runST)
+import           Control.DeepSeq              (force)
+import           Control.Monad                (replicateM)
+import           Control.Monad.ST             (runST)
+import           Control.Parallel.Strategies
+import           Data.Hashable
+import           Data.HashSet                 (HashSet)
+import qualified Data.HashSet                 as HashSet
+import           Data.List                    (maximumBy)
+import           Data.Map                     (Map)
+import qualified Data.Map                     as Map
+import           Data.Ord                     (comparing)
+import           Data.Text                    (Text)
+import qualified Data.Text                    as Text
+import qualified Data.Vector.Unboxed          as UVector
+import qualified Data.Vector.Unboxed.Mutable  as MVector
+import           GHC.TypeLits                 (KnownNat)
 import           Math.NumberTheory.Logarithms (intLog2')
-import Data.Text (Text)
-import qualified Data.Text as Text
-import Control.Parallel.Strategies
 
-import EERTREE.Node ( Node(len) )
-import EERTREE.Symbol
+import qualified EERTREE.List
+import           EERTREE.Node                 (Node)
+import qualified EERTREE.Node                 as Node
 import           EERTREE.Simple
+import           EERTREE.Symbol
 
 -- | Compute first \(n\) elements of <https://oeis.org/A216264 A216264 sequence>
 -- (binary rich strings count for \(n = 0, 1, \ldots\)).
@@ -44,14 +49,17 @@ a216264 cores n = a216264' startLength ++ map (*2) halves
     halves = foldr (zipWith (+)) (repeat 0) results
     startLength = min 7 (1 + intLog2' cores)
     results =
-      [ dfsCountLevels (n - startLength) (eertree (0 : startBits)) (richSubEERTREEs @2)
+      [ dfsCountLevels (n - startLength) (initEERTREEwithHashSet (eertree (0 : startBits))) (richSubEERTREEs' @2)
       | startBits <- replicateM (startLength - 1) [0,1]   -- only works for startLength <= 7, since not all binary strings are rich starting from n = 8
       ] `using` parList rpar
 
 a216264' :: Int -> [Int]
 a216264' n = 1 : map (*2) halves
   where
-    halves = dfsCountLevels (n - 1) (singleton 0) (richSubEERTREEs @2)
+    halves = dfsCountLevels (n - 1) (initEERTREEwithHashSet (singleton 0)) (richSubEERTREEs' @2)
+
+initEERTREEwithHashSet :: EERTREE n -> (HashSet (Node n), EERTREE n)
+initEERTREEwithHashSet t = (HashSet.fromList (palindromes t), t)
 
 -- | Palindromic refrain:
 -- for a given string S find a palindrome P maximizing the value
@@ -73,7 +81,7 @@ palindromicRefrain t = maximumBy (comparing snd) (zip unique refrain)
     unique = map fst (Map.elems occ)
 
     -- | Calculate refrains
-    refrain = map (\(p, f) -> f * len p) (Map.elems occ)
+    refrain = map (\(p, f) -> f * Node.len p) (Map.elems occ)
 
 -- * Helpers
 
@@ -111,22 +119,39 @@ richSubEERTREEs t =
   , maxPrefix t' `notElem` palindromes t
   ]
 
+instance Hashable (Node n) where
+  hashWithSalt salt = hashWithSalt salt . Node.index
+
+-- | Efficiently compute all rich eertrees that can be produced
+-- from a given one by prepending a symbol to it.
+--
+-- Efficiency comes from the fact that we only need to check
+-- that a new maximum prefix is a new palindrome.
+richSubEERTREEs' :: forall n. KnownNat n => (HashSet (Node n), EERTREE n) -> [(HashSet (Node n), EERTREE n)]
+richSubEERTREEs' (ps, t) =
+  [ (HashSet.insert newPalindrome ps, t')
+  | c <- alphabet @n
+  , let t' = prepend c t
+  , let newPalindrome = maxPrefix t'
+  , not (newPalindrome `HashSet.member` ps)
+  ]
+
 -- Return the length of the longest palindromic substring
 -- and the number of substrings with such length.
 maxSubLengthSum :: [(Node n, Int)] -> (Int, Int)
 maxSubLengthSum listFreq =
   let
-    maxLength = maximumBy (comparing (len . fst)) listFreq
+    maxLength = maximumBy (comparing (Node.len . fst)) listFreq
     -- Get the nodes that have the maximum length only
-    maxNodes = filter (\(node, _) -> len node == len (fst maxLength)) listFreq
+    maxNodes = filter (\(node, _) -> Node.len node == Node.len (fst maxLength)) listFreq
     freqValues = map snd maxNodes
   in
-    (len (fst maxLength), sum freqValues)
+    (Node.len (fst maxLength), sum freqValues)
 
 getMsubstrPar :: Int -> Text -> (Int, Int)
-getMsubstrPar _chunkSize input = (lenn, freq)
+getMsubstrPar cores input = (lenn, freq)
   where
-    chunkSize = Text.length input `div` 16
+    chunkSize = Text.length input `div` cores
     tree = foldr merge empty chunks
     chunks =
       [ eertreeFromString @26 (Text.unpack chunk)
