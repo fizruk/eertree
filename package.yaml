@@ -28,6 +28,7 @@ custom-setup:
 dependencies:
 - base >= 4.7 && < 5
 - containers
+- unordered-containers
 - vector
 - QuickCheck
 - integer-logarithms

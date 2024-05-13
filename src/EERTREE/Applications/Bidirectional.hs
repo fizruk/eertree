@@ -20,9 +20,17 @@ import qualified Data.Text as Text
 import Control.Parallel.Strategies
 import GHC.Conc (numCapabilities)
 
-import EERTREE.Node ( Node(len) )
+import EERTREE.Node ( Node(len, index) )
 import EERTREE.Symbol
-import           EERTREE.Tree.Bidirectional
+import EERTREE.Tree.Bidirectional
+    ( EERTREE(maxPrefix, palindromes),
+      singleton,
+      eertree,
+      prepend,
+      frequency',
+      eertreeFromString)
+import Data.IntMap.Strict (IntMap)
+import qualified Data.IntMap.Strict as IntMap
 
 -- | Compute first \(n\) elements of <https://oeis.org/A216264 A216264 sequence>
 -- (binary rich strings count for \(n = 0, 1, \ldots\)).
@@ -45,7 +53,7 @@ a216264 cores n = a216264' startLength ++ map (*2) halves
     halves = foldr (zipWith (+)) (repeat 0) results
     startLength = min 7 (1 + intLog2' cores)
     results =
-      [ dfsCountLevels (n - startLength) (eertree (0 : startBits)) (richSubEERTREEs @2)
+      [ dfsCountLevels (n - startLength) (getInitRichState (eertree (0 : startBits))) (richSubEERTREEs @2)
       | startBits <- replicateM (startLength - 1) [0,1]   -- only works for startLength <= 7, since not all binary strings are rich starting from n = 8
       ] `using` parList rpar
 
@@ -54,7 +62,10 @@ a216264 cores n = a216264' startLength ++ map (*2) halves
 a216264' :: Int -> [Int]
 a216264' n = 1 : map (*2) halves
   where
-    halves = dfsCountLevels (n - 1) (singleton 0) (richSubEERTREEs @2)
+    halves = dfsCountLevels (n - 1) (getInitRichState (singleton 0)) (richSubEERTREEs @2)
+
+getInitRichState :: forall n. KnownNat n => EERTREE n -> (EERTREE n, IntMap Bool)
+getInitRichState tree = (tree, IntMap.fromList (map (\x -> (fromIntegral (index x), True)) (palindromes tree)) )
 
 -- For bench
 getRich :: Int -> [Int]
@@ -113,10 +124,12 @@ dfsCountLevels k root subtrees = runST $ do
 --
 -- Efficiency comes from the fact that we only need to check
 -- that a new maximum prefix is a new palindrome.
-richSubEERTREEs :: forall n. KnownNat n => EERTREE n -> [EERTREE n]
-richSubEERTREEs t =
-  [ t'
+richSubEERTREEs :: forall n. KnownNat n => (EERTREE n, IntMap Bool) -> [(EERTREE n, IntMap Bool)]
+richSubEERTREEs (t, mp) =
+  [ (t', IntMap.insert ind True mp)
   | c <- alphabet @n
   , let t' = prepend c t
-  , maxPrefix t' `notElem` palindromes t
+  , let ind = fromIntegral (index (maxPrefix t'))
+  , not (ind `IntMap.member` mp)
   ]
+
