@@ -9,7 +9,7 @@
 
 module Main where
 import Data.List (foldl')
-import EERTREE.Applications.Unidirectional (getMsubstrPar)
+import EERTREE.Applications.Bidirectional (getMsubstrPar)
 import           EERTREE.Node
 import Data.Text.Lazy (Text)
 import qualified Data.Text.Lazy as Text

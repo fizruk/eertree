@@ -95,13 +95,13 @@ getMsubstr str = countMax' (map len (palindromes tree))
   where
     tree = eertreeFromString @26 str
 
-getMsubstrPar :: Text -> (Int, Int)
-getMsubstrPar input = countMax' (map len (palindromes tree))
-  where
-    cores = numCapabilities
-    chunkSize = Text.length input `div` fromIntegral cores
-    tree = foldr merge empty chunks
-    chunks =
-      [ eertreeFromString @26 (Text.unpack chunk)
-      | chunk <- Text.chunksOf chunkSize input
-      ] `using` parList rpar
+-- getMsubstrPar :: Text -> (Int, Int)
+-- getMsubstrPar input = countMax' (map len (palindromes tree))
+--   where
+--     cores = numCapabilities
+--     chunkSize = Text.length input `div` fromIntegral cores
+--     tree = foldr merge empty chunks
+--     chunks =
+--       [ eertreeFromString @26 (Text.unpack chunk)
+--       | chunk <- Text.chunksOf chunkSize input
+--       ] `using` parList rpar

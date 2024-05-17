@@ -15,12 +15,13 @@ import qualified Data.Map                    as Map
 import           GHC.TypeLits                (KnownNat)
 import           Control.Monad.ST            (runST)
 import           Math.NumberTheory.Logarithms (intLog2')
-import Data.Text (Text)
-import qualified Data.Text as Text
+import EERTREE.Node
+import Data.Text.Lazy (Text)
+import qualified Data.Text.Lazy as Text
 import Control.Parallel.Strategies
 import GHC.Conc (numCapabilities)
 
-import EERTREE.Node ( Node(len, index) )
+import Data.List (foldl')
 import EERTREE.Symbol
 import EERTREE.Tree.Bidirectional
     ( EERTREE(maxPrefix, palindromes),
@@ -28,7 +29,9 @@ import EERTREE.Tree.Bidirectional
       eertree,
       prepend,
       frequency',
-      eertreeFromString)
+      eertreeFromString,
+      merge,
+      empty)
 import Data.IntMap.Strict (IntMap)
 import qualified Data.IntMap.Strict as IntMap
 
@@ -133,3 +136,27 @@ richSubEERTREEs (t, mp) =
   , not (ind `IntMap.member` mp)
   ]
 
+------------------------------------------
+
+countMax :: Ord a => a -> [a] -> (a, Int)
+countMax z = foldl' step (z, 1)
+  where
+    step acc@(x, n) y
+      | y > x = (y, 1)
+      | y == x = (x, n + 1)
+      | otherwise = acc
+
+countMax' :: Ord a => [a] -> (a, Int)
+countMax' [] = error "empty list"
+countMax' (x:xs) = countMax x xs
+
+getMsubstrPar :: Text -> (Int, Int)
+getMsubstrPar input = countMax' (map len (palindromes tree))
+  where
+    cores = numCapabilities
+    chunkSize = Text.length input `div` fromIntegral cores
+    tree = foldr merge empty chunks
+    chunks =
+      [ eertreeFromString @26 (Text.unpack chunk)
+      | chunk <- Text.chunksOf chunkSize input
+      ] `using` parList rpar
