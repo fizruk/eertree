@@ -110,7 +110,8 @@ merge t1 t2 = mergeLeft s1 t2 []
 
     mergeLeft s1' t2' pals
       | null s1'              = t2'
-      | maxSuffixC <= newPalC = mergeLeft cs (prepend c t2') (newPal : pals)
+      | maxSuffixC <= newPalC = mergeLeft cs (prepend c t2') $
+            if strLen t2 + len newPal <= strLen t2' + 1 then pals else (newPal : pals)
       | otherwise             = t2' { strLen      = strLen t1 + strLen t2
                                     , maxPrefix   = maxPrefix t1
                                     , strSuffix   = strSuffix t1 <> fromEERTREE t2

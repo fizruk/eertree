@@ -144,7 +144,7 @@ append :: KnownNat n => Symbol n -> EERTREE n -> EERTREE n
 append c t =  reverseEERTREE (prepend c (reverseEERTREE (addTreeVersion t)))
 
 popBackTreeVersion :: KnownNat n => EERTREE n -> EERTREE n
-popBackTreeVersion t = 
+popBackTreeVersion t =
   case history t of
     []     -> empty
     [_] -> empty
@@ -155,7 +155,6 @@ addTreeVersion :: KnownNat n => EERTREE n -> EERTREE n
 addTreeVersion t = t { history = t : history t }
 
 -- | Merge two eertrees in O(1) on average
--- TODO: add history management to merge
 -- >>> fromEERTREE (merge @2 "0110100" "11001001")
 -- [0,1,1,0,1,0,0,1,1,0,0,1,0,0,1]
 --
@@ -177,7 +176,8 @@ merge t1 t2
       -- | Merge by prepending symbols to `t2`
       mergeLeft s1' t2' pals
         | null s1'           = t2'
-        | c1 <= newPalCenter = mergeLeft cs (prepend c t2') (newPal : pals)
+        | c1 <= newPalCenter = mergeLeft cs (prepend c t2') $
+            if strLen t2 + len newPal <= strLen t2' + 1 then pals else (newPal : pals)
         | otherwise          = t2' { strLen             = strLen t1 + strLen t2
                                    , maxPrefix          = maxPrefix t1
                                    , strReversedPrefix  = strReversedPrefix t2' <> s1'
@@ -196,12 +196,13 @@ merge t1 t2
                      _                   -> newSuffixOf c (maxPrefix t2')
 
           -- | Center of a new palindrome
-          newPalCenter = fromIntegral (length s1') + fromIntegral (len newPal) / 2
+          newPalCenter = fromIntegral (length s1') + fromIntegral (len newPal) / 2 
 
       -- | Merge by appending symbols to `t1`
       mergeRight t1' s2' pals
         | null s2'           = t1'
-        | newPalCenter <= c2 = mergeRight (append c t1') cs (newPal : pals)
+        | newPalCenter <= c2 = mergeRight (append c t1') cs $
+          if strLen t1 + len newPal <= strLen t1' + 1 then pals else  (newPal : pals)
         | otherwise          = t1' { strLen             = strLen t1 + strLen t2
                                    , maxSuffix          = maxSuffix t2
                                    , strReversedPrefix  = strReversedPrefix t2 <> eertreeToSeqReversed t1
