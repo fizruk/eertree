@@ -1,0 +1,162 @@
+{-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications    #-}
+{-# LANGUAGE BangPatterns    #-}
+module EERTREE.Applications.Bidirectional where
+
+import Control.DeepSeq (force)
+import Control.Monad (replicateM)
+import           Data.Ord                    (comparing)
+import           Data.List                   (maximumBy)
+import qualified Data.Vector.Unboxed         as UVector
+import qualified Data.Vector.Unboxed.Mutable as MVector
+import           Data.Map                    (Map)
+import qualified Data.Map                    as Map
+import           GHC.TypeLits                (KnownNat)
+import           Control.Monad.ST            (runST)
+import           Math.NumberTheory.Logarithms (intLog2')
+import EERTREE.Node
+import Data.Text.Lazy (Text)
+import qualified Data.Text.Lazy as Text
+import Control.Parallel.Strategies
+import GHC.Conc (numCapabilities)
+
+import Data.List (foldl')
+import EERTREE.Symbol
+import EERTREE.Tree.Bidirectional
+    ( EERTREE(maxPrefix, palindromes),
+      singleton,
+      eertree,
+      prepend,
+      frequency',
+      eertreeFromString,
+      merge,
+      empty)
+import Data.IntMap.Strict (IntMap)
+import qualified Data.IntMap.Strict as IntMap
+
+-- | Compute first \(n\) elements of <https://oeis.org/A216264 A216264 sequence>
+-- (binary rich strings count for \(n = 0, 1, \ldots\)).
+--
+-- For memory efficiency the whole sequence segment
+-- is computed at once and not lazily as one might expect.
+--
+-- This should run in \(\mathcal{O}(n)\) memory
+-- with garbage collector working normally.
+--
+-- >>> a216264 2 15
+-- [1,2,4,8,16,32,64,128,252,488,932,1756,3246,5916,10618]
+a216264 :: Int -> Int -> [Int]
+a216264 cores n = a216264' startLength ++ map (*2) halves
+  where
+    -- Observation: there is exactly the same number of rich strings
+    -- that start with 0 as there are those starting with 1.
+    -- That is why we can do half work (or 1/(alphabet size) in general)
+    -- and count rich strings faster.
+    halves = foldr (zipWith (+)) (repeat 0) results
+    startLength = min 7 (1 + intLog2' cores)
+    results =
+      [ dfsCountLevels (n - startLength) (getInitRichState (eertree (0 : startBits))) (richSubEERTREEs @2)
+      | startBits <- replicateM (startLength - 1) [0,1]   -- only works for startLength <= 7, since not all binary strings are rich starting from n = 8
+      ] `using` parList rpar
+
+-- >>> a216264' 15
+-- [1,2,4,8,16,32,64,128,252,488,932,1756,3246,5916,10618]
+a216264' :: Int -> [Int]
+a216264' n = 1 : map (*2) halves
+  where
+    halves = dfsCountLevels (n - 1) (getInitRichState (singleton 0)) (richSubEERTREEs @2)
+
+getInitRichState :: forall n. KnownNat n => EERTREE n -> (EERTREE n, IntMap Bool)
+getInitRichState tree = (tree, IntMap.fromList (map (\x -> (fromIntegral (index x), True)) (palindromes tree)) )
+
+-- For bench
+getRich :: Int -> [Int]
+getRich= a216264'
+
+getRichParallel :: Int -> [Int]
+getRichParallel = a216264 numCapabilities
+
+-- | Palindromic refrain:
+-- for a given string S find a palindrome P maximizing the value
+-- |P| * occ(S, P), where occ(S, P) is the number of occurences of P in S
+--
+-- >>> :set -XDataKinds
+-- >>> palindromicRefrain (eertreeFromString @3 "0102010")
+-- (fromPalindrome [0,1,0,2,0,1,0],7)
+--
+-- >>> palindromicRefrain (eertreeFromString @1 "000")
+-- (fromPalindrome [0,0],4)
+palindromicRefrain :: KnownNat n => EERTREE n -> (Node n, Int)
+palindromicRefrain t = maximumBy (comparing snd) (zip unique refrain)
+  where
+    -- | Count palindrome frequency
+    occ = frequency' t
+
+    -- | Unique palindromes
+    unique = map fst (Map.elems occ)
+
+    -- | Calculate refrains
+    refrain = map (\(p, f) -> f * len p) (Map.elems occ)
+
+-- * Helpers
+
+-- | Efficiently count nodes at every level of a tree using DFS.
+--
+-- Memory efficiency comes from the fact that in depth-first
+-- traversal we don't have to store all nodes at a level
+-- and only need to store a path from root to the current node.
+dfsCountLevels
+  :: Int          -- ^ Number of levels to cover (max depth).
+  -> a            -- ^ Root.
+  -> (a -> [a])   -- ^ How to get subtrees.
+  -> [Int]        -- ^ Number of elements at every level.
+dfsCountLevels k root subtrees = runST $ do
+  result <- MVector.replicate k 0
+  go result 0 root
+  UVector.toList <$> UVector.freeze result
+    where
+      go v !i t
+        | i >= k = return ()
+        | otherwise = do
+          MVector.modify v (+1) i
+          mapM_ (go v (i+1)) (subtrees t)
+
+-- | Efficiently compute all rich eertrees that can be produced
+-- from a given one by prepending a symbol to it.
+--
+-- Efficiency comes from the fact that we only need to check
+-- that a new maximum prefix is a new palindrome.
+richSubEERTREEs :: forall n. KnownNat n => (EERTREE n, IntMap Bool) -> [(EERTREE n, IntMap Bool)]
+richSubEERTREEs (t, mp) =
+  [ (t', IntMap.insert ind True mp)
+  | c <- alphabet @n
+  , let t' = prepend c t
+  , let ind = fromIntegral (index (maxPrefix t'))
+  , not (ind `IntMap.member` mp)
+  ]
+
+------------------------------------------
+
+countMax :: Ord a => a -> [a] -> (a, Int)
+countMax z = foldl' step (z, 1)
+  where
+    step acc@(x, n) y
+      | y > x = (y, 1)
+      | y == x = (x, n + 1)
+      | otherwise = acc
+
+countMax' :: Ord a => [a] -> (a, Int)
+countMax' [] = error "empty list"
+countMax' (x:xs) = countMax x xs
+
+getMsubstrPar :: Text -> (Int, Int)
+getMsubstrPar input = countMax' (map len (palindromes tree))
+  where
+    cores = numCapabilities
+    chunkSize = Text.length input `div` fromIntegral cores
+    tree = foldr merge empty chunks
+    chunks =
+      [ eertreeFromString @26 (Text.unpack chunk)
+      | chunk <- Text.chunksOf chunkSize input
+      ] `using` parList rpar

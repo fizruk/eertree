@@ -9,6 +9,21 @@ module EERTREE.Symbol where
 import           Data.Proxy
 import           GHC.TypeLits    (KnownNat, Nat, natVal)
 import           Control.DeepSeq
+import Data.Ord
+import Data.Char
+
+lowercaseEnglishToSymbol :: Char -> Int
+lowercaseEnglishToSymbol c = ord c - ord 'a'
+
+isLowercaseEnglish :: Char -> Bool
+isLowercaseEnglish x
+  | (ord x >= ord 'a') && (ord x <= ord 'z') = True
+  | otherwise = False
+
+charToInt :: Char -> Int
+charToInt c 
+  | isLowercaseEnglish c = lowercaseEnglishToSymbol c
+  | otherwise = digitToInt c
 
 -- $setup
 -- >>> :set -XTypeApplications -XDataKinds

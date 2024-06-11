@@ -1,3 +1,6 @@
 .stack-work/
 eertree.cabal
 *~
+build
+bench/hs/output.txt
+output.csv

@@ -31,3 +31,17 @@ stack build
 
 This should install all dependencies,
 including a proper version of GHC if needed.
+
+### Benchmarks
+Please refer to [automation file](bench/benchmarks.ipynb) for a guide on how to run benchmarks and see results.\
+To run C++ benchmarks separetely:
+```sh
+cd bench/cpp
+make run
+```
+Alternatively, you can use 
+```sh
+make clean
+make build
+```
+to clean and build only.
